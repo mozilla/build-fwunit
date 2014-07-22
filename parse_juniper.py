@@ -117,15 +117,19 @@ def process(fw):
         destset = IPSet([r.destination])
         interface_ips[r.interface] = interface_ips.get(r.interface, IPSet()) + (destset - matched)
         matched = matched + destset
-    import pprint
-    pprint.pprint(interface_ips)
 
     # figure out the IPSet of IPs for each security zone
     zone_nets = {}
     for zone in fw.zones:
+        net = IPSet()
         for itfc in zone.interfaces:
-            pass
+            net += interface_ips[itfc]
+        zone_nets[zone.name] = net
+    import pprint
+    pprint.pprint(zone_nets)
 
+    # now, sort rules by their (zone-limited) source and destination nets
+    # TODO: need address books
 
 def main():
     ET.register_namespace('jr', 'http://xml.juniper.net/junos/12.1X44/junos-routing')
