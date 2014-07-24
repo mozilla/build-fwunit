@@ -7,6 +7,7 @@ import sys
 import argparse
 from fwunit.parse import Firewall
 from fwunit.process import policies_to_rules
+from fwunit import log
 
 
 def prep():
@@ -44,8 +45,11 @@ def prep():
         '--configuration-security-zones-xml', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--output', dest='output_file', type=str, default='rules.pkl')
+    parser.add_argument( '--verbose', action='store_true')
 
     args = parser.parse_args(sys.argv[1:])
+
+    log.setup(args.verbose)
 
     firewall = Firewall(
         security_policies_xml=args.security_policies_xml,

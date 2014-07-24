@@ -5,6 +5,9 @@
 import itertools
 from fwunit.ip import IPSet, IPPairs
 from fwunit.types import Rule
+from logging import getLogger
+
+log = getLogger(__name__)
 
 def policies_to_rules(firewall):
     """Process the data in a parse.Firewall instance into a list of non-overlapping
@@ -22,7 +25,7 @@ def process_interface_ips(routes):
     # specific and only considering IP space not already allocated to an
     # interface.  This has the effect of leaving a "swiss cheese" default route
     # containing all IPs that aren't routed by a more-specific route.
-    print "calculating interface IP ranges"
+    log.info("calculating interface IP ranges")
     routes = routes[:]
     routes.sort(key=lambda r: -r.destination.prefixlen())
     matched = IPSet()
@@ -42,7 +45,7 @@ def process_zone_nets(zones, interface_ips):
     # assumption (just like RFP) that each IP will communicate on exactly one
     # firewall interface.  Each interface is in exactly one zone, so this means
     # that each IP is in exactly one zone.
-    print "calculating zone IP ranges"
+    log.info("calculating zone IP ranges")
     zone_nets = {}
     for zone in zones:
         net = IPSet()
@@ -53,7 +56,7 @@ def process_zone_nets(zones, interface_ips):
 
 
 def process_policies_by_zone_pair(policies):
-    print "tabulating policies by zone"
+    log.info("tabulating policies by zone")
     policies_by_zone_pair = {}
     for pol in policies:
         policies_by_zone_pair.setdefault(
@@ -62,7 +65,7 @@ def process_policies_by_zone_pair(policies):
 
 
 def process_address_sets_per_policy(zones, policies_by_zone_pair):
-    print "computing address sets per policy"
+    log.info("computing address sets per policy")
     src_per_policy = {}
     dst_per_policy = {}
     zones_by_name = dict((z.name, z) for z in zones)
@@ -78,7 +81,7 @@ def process_address_sets_per_policy(zones, policies_by_zone_pair):
 
 
 def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, dst_per_policy):
-    print "processing rules by application"
+    log.info("processing rules by application")
     # turn policies into a list of Rules (permit only), limited by zone,
     # that do not overlap.  The tricky bit here is processing policies in
     # order and accounting for denies.  We do this once for each
@@ -93,7 +96,7 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
         # XXX temporary
         if to_zone != 'srv':
             continue
-        print ".. from", from_zone, "to", to_zone
+        log.debug(" from-zone %s to-zone %s", from_zone, to_zone)
         zpolicies.sort(key=lambda p: p.sequence)
         apps = set(itertools.chain(*[p.applications for p in zpolicies]))
         if 'any' in apps:
@@ -126,12 +129,12 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
 
     # now, simplify rules with the same application and the same source or
     # destination by combining them.
-    print "combining rules"
+    log.info("combining rules")
     pass_num = 1
     while True:
-        print ".. pass", pass_num
+        log.debug(" pass %d", pass_num)
         pass_num += 1
-        combined = False
+        combined = 0
         for app, rules in rules_by_app.iteritems():
             # XXX temporary
             if app != 'tomcat':
@@ -148,7 +151,7 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
                                     app,
                                     last.name)
                         rv[-1] = rule
-                        combined = True
+                        combined += 1
                     else:
                         rv.append(rule)
                     last = rule
@@ -158,6 +161,7 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
         # if nothing was combined on this iteration, we're done
         if not combined:
             break
+        log.debug("  eliminated %d rules" % combined)
 
     # convert from by_app to just a list of rules (which include the app)
     return list(itertools.chain(*rules_by_app.itervalues()))

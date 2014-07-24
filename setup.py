@@ -14,6 +14,7 @@ setup(
     install_requires=[
         "IPy",
         "nose",
+        "blessings",
     ],
     entry_points={
         "console_scripts": [

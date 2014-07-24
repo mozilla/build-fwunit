@@ -4,6 +4,9 @@
 
 import xml.etree.ElementTree as ET
 from .ip import IP, IPSet
+from logging import getLogger
+
+log = getLogger(__name__)
 
 
 class Policy(object):
@@ -147,7 +150,7 @@ class Firewall(object):
         self.zones = self._parse_zones(configuration_security_zones_xml)
 
     def _parse_policies(self, security_policies_xml):
-        print "parsing policies"
+        log.info("parsing policies")
         sspe = ET.parse(security_policies_xml).getroot()
         policies = []
         for elt in sspe.findall('.//security-context'):
@@ -160,7 +163,7 @@ class Firewall(object):
         return policies
 
     def _parse_routes(self, route_xml):
-        print "parsing routes"
+        log.info("parsing routes")
         sre = ET.parse(route_xml).getroot()
         routes = []
         # thanks for the namespaces, Juniper.
@@ -172,7 +175,7 @@ class Firewall(object):
         return []
 
     def _parse_zones(self, configuration_security_zones_xml):
-        print "parsing zones"
+        log.info("parsing zones")
         scsze = ET.parse(configuration_security_zones_xml).getroot()
         zones = []
         for sz in scsze.findall('.//security-zone'):
