@@ -1,6 +1,8 @@
 #! /usr/bin/python
 
-import copy
+import cPickle as Pickle
+import sys
+import argparse
 import itertools
 from IPy import IP, IPSet
 from collections import namedtuple
@@ -233,21 +235,28 @@ class Zone(object):
 
 
 class Firewall(object):
-    def __init__(self, fw, show_security_policies_elt,
+    def __init__(self, show_security_policies_elt,
                  show_route_elt, show_configuration_security_zones_elt):
-        #: firewall name
-        self.fw = fw
-
-        #: zone name -> IPSet
-        self.zone_nets = {}
-
+        # parse the XML files
         policies = self._parse_policies(show_security_policies_elt)
         routes = self._parse_routes(show_route_elt)
         zones = self._parse_zones(show_configuration_security_zones_elt)
 
-        self._process(policies, routes, zones)
+        # process the parsed data into a queryable format
+        interface_ips = self._process_interface_ips(routes)
+        zone_nets = self._process_zone_nets(zones, interface_ips)
+        policies_by_zone_pair = self._process_policies_by_zone_pair(policies)
+        src_per_policy, dst_per_policy = self._process_address_sets_per_policy(zones, policies_by_zone_pair)
+        rules = self._process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, dst_per_policy)
+
+        #: list of [Rule] instances
+        self.rules = rules
+
+    def dump_pickle(self, file):
+        Pickle.dump(self.rules, file)
 
     def _parse_policies(self, show_security_policies_elt):
+        print "parsing policies"
         policies = []
         for elt in show_security_policies_elt.findall('.//security-context'):
             from_zone = elt.find('./context-information/source-zone-name').text
@@ -258,6 +267,7 @@ class Firewall(object):
         return policies
 
     def _parse_routes(self, show_route_elt):
+        print "parsing routes"
         sre = show_route_elt
         routes = []
         # thanks for the namespaces, Juniper.
@@ -269,15 +279,15 @@ class Firewall(object):
         return []
 
     def _parse_zones(self, show_configuration_security_zones_elt):
+        print "parsing zones"
         scsz = show_configuration_security_zones_elt
         zones = []
         for sz in scsz.findall('.//security-zone'):
             zones.append(Zone(sz))
         return zones
 
-    def _process(self, policies, routes, zones):
-        # process the parsed data into a queryable format
-
+    def _process_interface_ips(self, routes):
+        print "calculating interface IP ranges"
         # figure out the IPSet routed via each interface, by starting with the most
         # specific and only considering IP space not already allocated to an
         # interface.  This has the effect of leaving a "swiss cheese" default route
@@ -292,7 +302,10 @@ class Firewall(object):
             destset = IPSet([r.destination])
             interface_ips[r.interface] = interface_ips.get(r.interface, IPSet()) + (destset - matched)
             matched = matched + destset
+        return interface_ips
 
+    def _process_zone_nets(self, zones, interface_ips):
+        print "calculating zone IP ranges"
         # figure out the IPSet of IPs for each security zone.  This makes the
         # assumption (just like RFP) that each IP will communicate on exactly one
         # firewall interface.  Each interface is in exactly one zone, so this means
@@ -303,13 +316,18 @@ class Firewall(object):
             for itfc in zone.interfaces:
                 net += interface_ips[itfc]
             zone_nets[zone.name] = net
-        self.zone_nets = zone_nets
+        return zone_nets
 
+    def _process_policies_by_zone_pair(self, policies):
+        print "tabulating policies by zone"
         # organize policies by to/from zone pair
         policies_by_zone_pair = {}
         for pol in policies:
             policies_by_zone_pair.setdefault((pol.from_zone, pol.to_zone), []).append(pol)
+        return policies_by_zone_pair
 
+    def _process_address_sets_per_policy(self, zones, policies_by_zone_pair):
+        print "computing address sets per policy"
         # compute actual address sets per policy
         src_per_policy = {}
         dst_per_policy = {}
@@ -320,7 +338,10 @@ class Firewall(object):
             for pol in zpolicies:
                 src_per_policy[pol] = sum((from_addrbook[a] for a in pol.source_addresses), IPSet())
                 dst_per_policy[pol] = sum((to_addrbook[a] for a in pol.destination_addresses), IPSet())
+        return src_per_policy, dst_per_policy
 
+    def _process_rules(self, policies, zone_nets, policies_by_zone_pair, src_per_policy, dst_per_policy):
+        print "processing rules by application"
         # turn policies into a list of Rules (permit only), limited by zone,
         # that do not overlap.  The tricky bit here is processing policies in
         # order and accounting for denies.  We do this once for each
@@ -335,7 +356,7 @@ class Firewall(object):
             # XXX temporary
             if to_zone != 'srv':
                 continue
-            print "from", from_zone, "to", to_zone
+            print ".. from", from_zone, "to", to_zone
             zpolicies.sort(key=lambda p: p.sequence)
             apps = set(itertools.chain(*[p.applications for p in zpolicies]))
             if 'any' in apps:
@@ -365,40 +386,65 @@ class Firewall(object):
                         break
 
         # now, simplify rules with the same application and the same source or
-        # destination by combining them.  TODO: I suspect this needs to be
-        # repeated until it's stable?
-        for app, rules in rules_by_app.iteritems():
-            # XXX temporary
-            if app != 'tomcat':
-                continue
-            for combine_by in 0, 1:  # src, dst
-                # sort by prefix, so that identical IPSets sort together
-                rules.sort(key=lambda r: (r[combine_by].prefixes, r.name))
-                rv = []
-                last = None
-                for rule in rules:
-                    if last and last[combine_by] == rule[combine_by] and last.name == rule.name:
-                        rule = Rule(last.src+rule.src, 
-                                    last.dst+rule.dst,
-                                    app,
-                                    last.name)
-                        rv[-1] = rule
-                    else:
-                        rv.append(rule)
-                    last = rule
-                rules = rv
-            rules_by_app[app] = rules
-            
-        import pprint
-        pprint.pprint(rules_by_app['tomcat'])
-        self.rules_by_app = rules_by_app
+        # destination by combining them.
+        print "combining rules"
+        pass_num = 1
+        while True:
+            print ".. pass", pass_num
+            pass_num += 1
+            combined = False
+            for app, rules in rules_by_app.iteritems():
+                # XXX temporary
+                if app != 'tomcat':
+                    continue
+                for combine_by in 0, 1:  # src, dst
+                    # sort by prefix, so that identical IPSets sort together
+                    rules.sort(key=lambda r: (r[combine_by].prefixes, r.name))
+                    rv = []
+                    last = None
+                    for rule in rules:
+                        if last and last[combine_by] == rule[combine_by] and last.name == rule.name:
+                            rule = Rule(last.src+rule.src, 
+                                        last.dst+rule.dst,
+                                        app,
+                                        last.name)
+                            rv[-1] = rule
+                            combined = True
+                        else:
+                            rv.append(rule)
+                        last = rule
+                    rules = rv
+                rules_by_app[app] = rules
+
+            # if nothing was combined on this iteration, we're done
+            if not combined:
+                break
+        
+        # convert from by_app to just a list of rules (which include the app)
+        return list(itertools.chain(*rules_by_app.itervalues()))
 
 
 def main():
-    ET.register_namespace('jr', 'http://xml.juniper.net/junos/12.1X44/junos-routing')
-    firewall = Firewall("fw1.releng.scl3",
-        show_security_policies_elt=ET.parse('fw1_releng_scl3_show_security_policies.xml').getroot(),
-        show_route_elt=ET.parse('fw1_releng_scl3_show_route.xml').getroot(),
-        show_configuration_security_zones_elt=ET.parse('fw1_releng_scl3_show_configuration_security_zones.xml').getroot())
+    epilog = """
+        Provide the following:
+            --security-policies-xml: output of 'show security policies | display xml'
+            --route-xml: output of 'show route | display xml'
+            --configuration-security-zones-xml: output of 'show configuration security zones | display xml'
+        The output will be written to --output, defaulting to 'rules.pkl'
+    """
+    parser = argparse.ArgumentParser(description='Ingest output from a Juniper firewall and create a datafile containing the results.', epilog=epilog)
+    parser.add_argument('--security-policies-xml', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--route-xml', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--configuration-security-zones-xml', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--output', dest='output_file', type=str, default='rules.pkl')
 
-main()
+    args = parser.parse_args(sys.argv[1:])
+
+    firewall = Firewall(
+        show_security_policies_elt=ET.parse(args.security_policies_xml).getroot(),
+        show_route_elt=ET.parse(args.route_xml).getroot(),
+        show_configuration_security_zones_elt=ET.parse(args.configuration_security_zones_xml).getroot())
+    firewall.dump_pickle(open(args.output_file, "w"))
+
+if __name__ == "__main__":
+    main()
