@@ -133,7 +133,7 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
         pass_num += 1
         combined = 0
         for app, rules in rules_by_app.iteritems():
-            for combine_by in -1, 1:  # src, dst
+            for combine_by in 0, 1:  # src, dst
                 # sort by prefix, so that identical IPSets sort together
                 rules.sort(key=lambda r: (r[combine_by].prefixes, r.name))
                 rv = []
