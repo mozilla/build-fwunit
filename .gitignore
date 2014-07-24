@@ -1,3 +1,4 @@
 *.xml
 rules.pkl
 *.pyc
+*.egg-info

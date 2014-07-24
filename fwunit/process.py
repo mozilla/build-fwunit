@@ -1,16 +1,14 @@
-#! /usr/bin/python
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import cPickle as Pickle
-import sys
-import argparse
 import itertools
 from fwunit.ip import IPSet, IPPairs
 from fwunit.types import Rule
-from fwunit.parse import Firewall
 
-
-def process(firewall):
-    # process the parsed data into a queryable format
+def policies_to_rules(firewall):
+    """Process the data in a parse.Firewall instance into a list of non-overlapping
+    Rule instances, suitable for queries"""
     interface_ips = process_interface_ips(firewall.routes)
     zone_nets = process_zone_nets(firewall.zones, interface_ips)
     policies_by_zone_pair = process_policies_by_zone_pair(firewall.policies)
@@ -165,33 +163,4 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
     return list(itertools.chain(*rules_by_app.itervalues()))
 
 
-def main():
-    epilog = """
-        Provide the following:
-            --security-policies-xml: output of 'show security policies | display xml'
-            --route-xml: output of 'show route | display xml'
-            --configuration-security-zones-xml: output of 'show configuration security zones | display xml'
-        The output will be written to --output, defaulting to 'rules.pkl'
-    """
-    parser = argparse.ArgumentParser(
-        description='Ingest output from a Juniper firewall and create a datafile containing the results.', epilog=epilog)
-    parser.add_argument(
-        '--security-policies-xml', type=argparse.FileType('r'), required=True)
-    parser.add_argument(
-        '--route-xml', type=argparse.FileType('r'), required=True)
-    parser.add_argument(
-        '--configuration-security-zones-xml', type=argparse.FileType('r'), required=True)
-    parser.add_argument(
-        '--output', dest='output_file', type=str, default='rules.pkl')
 
-    args = parser.parse_args(sys.argv[1:])
-
-    firewall = Firewall(
-        security_policies_xml=args.security_policies_xml,
-        route_xml=args.route_xml,
-        configuration_security_zones_xml=args.configuration_security_zones_xml)
-    rules = process(firewall)
-    Pickle.dump(rules, open(args.output_file, "w"))
-
-if __name__ == "__main__":
-    main()
