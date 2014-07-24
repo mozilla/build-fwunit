@@ -93,9 +93,6 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
     if 'any' in all_apps:
         all_apps.remove('any')
     for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
-        # XXX temporary
-        if to_zone != 'srv':
-            continue
         log.debug(" from-zone %s to-zone %s", from_zone, to_zone)
         zpolicies.sort(key=lambda p: p.sequence)
         apps = set(itertools.chain(*[p.applications for p in zpolicies]))
@@ -136,10 +133,7 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
         pass_num += 1
         combined = 0
         for app, rules in rules_by_app.iteritems():
-            # XXX temporary
-            if app != 'tomcat':
-                continue
-            for combine_by in 0, 1:  # src, dst
+            for combine_by in -1, 1:  # src, dst
                 # sort by prefix, so that identical IPSets sort together
                 rules.sort(key=lambda r: (r[combine_by].prefixes, r.name))
                 rv = []
