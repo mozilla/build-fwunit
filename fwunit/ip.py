@@ -61,6 +61,9 @@ class IPSet(IPy.IPSet):
             new.discard(prefix)
         return new
 
+    def __eq__(self, other):
+        return self.prefixes == other.prefixes
+
 
 class IPPairs(object):
 
