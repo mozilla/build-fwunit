@@ -55,7 +55,7 @@ class Rules(object):
                 remaining = remaining - IPPairs((rule.src, rule.dst))
         if remaining:
             flows = ",\n".join("%s -> %s" % p for p in remaining)
-            raise AssertionError("no rule found for flows\n%s" % flows)
+            raise AssertionError("no rule found for flows, app %s\n%s" % (app, flows))
 
     def sourcesFor(self, dst, app, ignore_sources=None):
         """Return an IPSet with all sources for traffic to any IP in dst on
@@ -75,9 +75,28 @@ class Rules(object):
                     rv = rv + src
         return rv
 
+    def allApps(self, src, dst, debug=False):
+        """Return a set of applications with access form src to dst.  Pass
+        debug=True to log the full list of matching flows"""
+        log.info("appsTo(%r, %r)" % (src, dst))
+        rv = set()
+        for rule in self.rules:
+            if not debug and rule.app in rv:
+                continue
+            src_matches = (rule.src & src)
+            if not src_matches:
+                continue
+            dst_matches = (rule.dst & dst)
+            if not dst_matches:
+                continue
+            log.info("matched policy %s from %s to %s: %s" % (rule.name, src_matches,
+                                                              dst_matches, rule.app))
+            rv.add(rule.app)
+        return rv
+
     def appsOn(self, dst, ignore_sources=None, debug=False):
         """Return a set of applications with access to dst, ignoring flows from ignore_sources)
-        application app, ignoring flows from ignore.  Pass debug=True to get the full list of
+        application app, ignoring flows from ignore.  Pass debug=True to log the full list of
         matching flows."""
         log.info("appsOn(%r, ignore_sources=%r)" % (dst, ignore_sources))
         rv = set()

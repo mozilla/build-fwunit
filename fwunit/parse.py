@@ -11,15 +11,15 @@ log = getLogger(__name__)
 
 class Policy(object):
 
-    def __init__(self, from_zone, to_zone, policy_information_elt):
+    def __init__(self):
         #: policy name
         self.name = None
 
         #: source zone name for this policy
-        self.from_zone = from_zone
+        self.from_zone = None
 
         #: destination zone name for this policy
-        self.to_zone = to_zone
+        self.to_zone = None
 
         #: boolean, true if the policy is enabled
         self.enabled = None
@@ -36,27 +36,30 @@ class Policy(object):
         #: applications (name) for the policy
         self.applications = []
 
-        #: 'accept' or 'deny'
+        #: 'permit' or 'deny'
         self.action = None
-
-        self._parse(policy_information_elt)
 
     def __str__(self):
         return ("%(action)s %(from_zone)s:%(source_addresses)r -> "
                 "%(to_zone)s:%(destination_addresses)r : %(applications)s") % self.__dict__
 
-    def _parse(self, policy_information_elt):
+    @classmethod
+    def _from_xml(cls, from_zone, to_zone, policy_information_elt):
+        pol = cls()
         pie = policy_information_elt
-        self.name = pie.find('./policy-name').text
-        self.enabled = pie.find('./policy-state').text == 'enabled'
-        self.sequence = int(pie.find('./policy-sequence-number').text)
-        self.source_addresses = [
-            self._parse_address(e) for e in pie.findall('./source-addresses/*')]
-        self.destination_addresses = [
-            self._parse_address(e) for e in pie.findall('./destination-addresses/*')]
-        self.applications = [
-            self._parse_application(e) for e in pie.findall('./applications/application')]
-        self.action = pie.find('./policy-action/action-type').text
+        pol.name = pie.find('./policy-name').text
+        pol.from_zone = from_zone
+        pol.to_zone = to_zone
+        pol.enabled = pie.find('./policy-state').text == 'enabled'
+        pol.sequence = int(pie.find('./policy-sequence-number').text)
+        pol.source_addresses = [
+            pol._parse_address(e) for e in pie.findall('./source-addresses/*')]
+        pol.destination_addresses = [
+            pol._parse_address(e) for e in pie.findall('./destination-addresses/*')]
+        pol.applications = [
+            pol._parse_application(e) for e in pie.findall('./applications/application')]
+        pol.action = pie.find('./policy-action/action-type').text
+        return pol
 
     def _parse_address(self, elt):
         addrname = elt.find('./address-name')
@@ -71,56 +74,61 @@ class Route(object):
 
     """A route from the firewall's routing table"""
 
-    def __init__(self, rt_elt):
+    def __init__(self):
         #: IPSet based on the route destination
         self.destination = None
 
         #: interface to which traffic is forwarded (via or local)
         self.interface = None
 
-        self._parse(rt_elt)
+        #: true if this destination is local (no next-hop IP)
+        self.is_local = None
 
     def __str__(self):
         return "%s via %s" % (self.destination, self.interface)
 
-    def _parse(self, rt_elt):
-        self.destination = IP(rt_elt.find(
+    @classmethod
+    def _from_xml(cls, rt_elt):
+        route = cls()
+        route.destination = IP(rt_elt.find(
             '{http://xml.juniper.net/junos/12.1X44/junos-routing}rt-destination').text)
         for entry in rt_elt.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt-entry'):
             if entry.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}current-active'):
                 vias = entry.findall(
                     './/{http://xml.juniper.net/junos/12.1X44/junos-routing}via')
                 if vias:
-                    self.interface = vias[0].text
-                locals = entry.findall(
-                    './/{http://xml.juniper.net/junos/12.1X44/junos-routing}nh-local-interface')
-                if locals:
-                    self.interface = locals[0].text
+                    route.interface = vias[0].text
+                route.is_local = not bool(
+                    entry.findall(
+                        './/{http://xml.juniper.net/junos/12.1X44/junos-routing}to'))
+        # only return a Route if we found something useful (omitting nh-local-interface)
+        if route.interface:
+            return route
 
 
 class Zone(object):
 
     """Parse out zone names and the corresponding interfaces"""
 
-    def __init__(self, zones_security_elt):
+    def __init__(self):
         #: list of interface names
         self.interfaces = []
 
         #: name -> ipset, based on the zone's address book
         self.addresses = {'any': IPSet([IP('0.0.0.0/0')])}
 
-        self._parse(zones_security_elt)
-
     def __str__(self):
         return "%s on %s" % (self.name, self.interfaces)
 
-    def _parse(self, security_zone_elt):
+    @classmethod
+    def _from_xml(cls, security_zone_elt):
+        zone = cls()
         sze = security_zone_elt
-        self.name = sze.find('name').text
+        zone.name = sze.find('name').text
 
         # interfaces
         for itfc in sze.findall('.//interfaces/name'):
-            self.interfaces.append(itfc.text)
+            zone.interfaces.append(itfc.text)
 
         # address book
         for addr in sze.find('address-book'):
@@ -131,8 +139,9 @@ class Zone(object):
                 ip = IPSet()
                 for setaddr in addr.findall('address'):
                     setname = setaddr.findtext('name')
-                    ip += self.addresses[setname]
-            self.addresses[name] = ip
+                    ip += zone.addresses[setname]
+            zone.addresses[name] = ip
+        return zone
 
 
 class Firewall(object):
@@ -158,7 +167,7 @@ class Firewall(object):
             to_zone = elt.find(
                 './context-information/destination-zone-name').text
             for pol_elt in elt.findall('./policies/policy-information'):
-                policy = Policy(from_zone, to_zone, pol_elt)
+                policy = Policy._from_xml(from_zone, to_zone, pol_elt)
                 policies.append(policy)
         return policies
 
@@ -170,7 +179,9 @@ class Firewall(object):
         for table in sre.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}route-table'):
             if table.findtext('{http://xml.juniper.net/junos/12.1X44/junos-routing}table-name') == 'inet.0':
                 for rt_elt in table.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt'):
-                    routes.append(Route(rt_elt))
+                    route = Route._from_xml(rt_elt)
+                    if route:
+                        routes.append(route)
                 return routes
         return []
 
@@ -179,5 +190,5 @@ class Firewall(object):
         scsze = ET.parse(configuration_security_zones_xml).getroot()
         zones = []
         for sz in scsze.findall('.//security-zone'):
-            zones.append(Zone(sz))
+            zones.append(Zone._from_xml(sz))
         return zones

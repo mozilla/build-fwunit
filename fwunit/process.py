@@ -5,6 +5,7 @@
 import itertools
 from fwunit.ip import IPSet, IPPairs
 from fwunit.types import Rule
+from fwunit.parse import Policy
 from logging import getLogger
 
 log = getLogger(__name__)
@@ -15,9 +16,13 @@ def policies_to_rules(firewall):
     interface_ips = process_interface_ips(firewall.routes)
     zone_nets = process_zone_nets(firewall.zones, interface_ips)
     policies_by_zone_pair = process_policies_by_zone_pair(firewall.policies)
+    attached_networks = process_attached_networks(firewall.routes)
+    policies_by_zone_pair = process_attached_network_policies(
+        policies_by_zone_pair, zone_nets, attached_networks)
     src_per_policy, dst_per_policy = process_address_sets_per_policy(
         firewall.zones, policies_by_zone_pair)
-    return process_rules(firewall.policies, zone_nets, policies_by_zone_pair, src_per_policy, dst_per_policy)
+    return process_rules(firewall.policies, zone_nets, policies_by_zone_pair, src_per_policy,
+                         dst_per_policy)
 
 
 def process_interface_ips(routes):
@@ -38,6 +43,16 @@ def process_interface_ips(routes):
             r.interface, IPSet()) + (destset - matched)
         matched = matched + destset
     return interface_ips
+
+
+def process_attached_networks(routes):
+    # return a list of networks to which this firewall is directly connected,
+    # so there is no "next hop".
+    log.info("calculating attached networks")
+    import pprint
+    pprint.pprint([(r.destination, r.interface) for r in routes if r.is_local])
+    networks = [IPSet([r.destination]) for r in routes if r.is_local]
+    return networks
 
 
 def process_zone_nets(zones, interface_ips):
@@ -64,6 +79,34 @@ def process_policies_by_zone_pair(policies):
     return policies_by_zone_pair
 
 
+def process_attached_network_policies(policies_by_zone_pair, zone_nets, attached_networks):
+    # include a full permit policy for traffic within each attached network,
+    # since such traffic will flow within that network and not through the
+    # firewall.
+    for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
+        if from_zone != to_zone:
+            continue
+        zone_net = zone_nets[from_zone]
+        for att in attached_networks:
+            if att & zone_net:
+                pfx = str(att.prefixes[0])
+                pol = Policy()
+                pol.name = "local-%s" % pfx
+                pol.from_zone = from_zone
+                pol.to_zone = to_zone
+                pol.enabled = True
+                pol.sequence = -1
+                # these lists ordinarily contain address names, but these are
+                # IPSets.  This is handled in process_adddress_sets_per_policy.
+                pol.source_addresses = [att]
+                pol.destination_addresses = [att]
+                pol.applications = ['any']
+                pol.action = 'permit'
+                zpolicies.insert(0, pol)
+    # this has been modified in place:
+    return policies_by_zone_pair
+
+
 def process_address_sets_per_policy(zones, policies_by_zone_pair):
     log.info("computing address sets per policy")
     src_per_policy = {}
@@ -71,16 +114,19 @@ def process_address_sets_per_policy(zones, policies_by_zone_pair):
     zones_by_name = dict((z.name, z) for z in zones)
     for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
         from_addrbook = zones_by_name[from_zone].addresses
+        get_from = lambda a: a if isinstance(a, IPSet) else from_addrbook[a]
         to_addrbook = zones_by_name[to_zone].addresses
+        get_to = lambda a: a if isinstance(a, IPSet) else to_addrbook[a]
         for pol in zpolicies:
             src_per_policy[pol] = sum(
-                (from_addrbook[a] for a in pol.source_addresses), IPSet())
+                (get_from(a) for a in pol.source_addresses), IPSet())
             dst_per_policy[pol] = sum(
-                (to_addrbook[a] for a in pol.destination_addresses), IPSet())
+                (get_to(a) for a in pol.destination_addresses), IPSet())
     return src_per_policy, dst_per_policy
 
 
-def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, dst_per_policy):
+def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy,
+                  dst_per_policy):
     log.info("processing rules by application")
     # turn policies into a list of Rules (permit only), limited by zone,
     # that do not overlap.  The tricky bit here is processing policies in
@@ -93,13 +139,14 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
     if 'any' in all_apps:
         all_apps.remove('any')
     for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
-        log.debug(" from-zone %s to-zone %s", from_zone, to_zone)
+        log.debug(" from-zone %s to-zone %s (%d policies)", from_zone, to_zone, len(zpolicies))
+        rule_count = 0
         zpolicies.sort(key=lambda p: p.sequence)
         apps = set(itertools.chain(*[p.applications for p in zpolicies]))
         if 'any' in apps:
             apps = all_apps
         for app in apps:
-            # for each app, countdown the IP pairs that have not matched a
+            # for each app, count down the IP pairs that have not matched a
             # rule yet, starting with the zones' IP spaces.  This simulates sequential
             # processing of the policies.
             remaining_pairs = IPPairs(
@@ -118,11 +165,13 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
                         d = d & dst
                         if len(s) and len(d):
                             rules.append(Rule(s, d, app, pol.name))
+                            rule_count += 1
                 # regardless, consider this src/dst pair matched
                 remaining_pairs = remaining_pairs - IPPairs((src, dst))
                 # if we've matched everything, we're done
                 if not remaining_pairs:
                     break
+        log.debug(" from-zone %s to-zone %s => %d rules", from_zone, to_zone, rule_count)
 
     # now, simplify rules with the same application and the same source or
     # destination by combining them.
@@ -159,6 +208,3 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy, ds
 
     # convert from by_app to just a list of rules (which include the app)
     return list(itertools.chain(*rules_by_app.itervalues()))
-
-
-
