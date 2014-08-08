@@ -18,7 +18,7 @@ def simplify_rules(rules):
     """Simplify rules by combining rules with the same application and exactly
     the same source, or exactly the same destination -- repeatedly, until
     nothing changes."""
-    logger.info("combining rules")
+    logger.info("simplifying %d rules", len(rules))
     rules_by_app = {}
     for rule in rules:
         rules_by_app.setdefault(rule.app, []).append(rule)
