@@ -49,30 +49,38 @@ def get_rules(regions, dynamic_subnets):
             return subnets[i - 1]
 
     logger.info("examining instances")
-    sgs_by_dynamic_subnet = {}
-    sgs_by_instance = {}
+    sgs_by_dynamic_subnet = {}  # {subnet name: set of SecurityGroupIds}
+    sgs_by_instance = {}  # {instance_name: [ip, set of SecurityGroupIds]}
+    ips_by_sg = {}  # {group id: IPSet}
     for id, instance in aws.get_all_instances(regions).iteritems():
-        if instance.state == 'terminated':
-            continue  # who cares
+        if instance.state == 'terminated' or instance.state == 'shutting-down':
+            continue  # meh, who cares
+        if not instance.vpc_id:
+            continue  # not in vpc; ignored
         if not instance.private_ip_address:
             logger.debug(
                 "ignoring instance with no private_ip_address: %s, tags %r",
                 instance.id, instance.tags)
             continue
         ip = IP(instance.private_ip_address)
+
+        for g in instance.groups:
+            ips_by_sg[g.id] = ips_by_sg.get(g.id, IPSet([])) + IPSet([IP(ip)])
+
         subnet = subnet_by_ip(ip)
         if not subnet:
             logger.debug(
                 "ignoring instance with no matching subnet for %s: %s, tags %r",
                 ip, instance.id, instance.tags)
             continue
+
         if subnet.dynamic:
-            sgs = sgs_by_dynamic_subnet.setdefault(subnet.name, set())
+            sgset = sgs_by_dynamic_subnet.setdefault(subnet.name, set())
         else:
             inst_name = instance.tags.get('Name', instance.id)
-            sgs = set()
-            sgs_by_instance[inst_name] = [ip, sgs]
-        sgs.update(SecurityGroupId(g.id, instance.region.name)
+            sgset = set()
+            sgs_by_instance[inst_name] = [ip, sgset]
+        sgset.update(SecurityGroupId(g.id, instance.region.name)
                    for g in instance.groups)
 
     rules = []
@@ -85,12 +93,15 @@ def get_rules(regions, dynamic_subnets):
             return
         for sgrule in sg.rules:
             for grant in sgrule.grants:
-                if not grant.cidr_ip:
-                    # TODO: change this
-                    logger.warning(
-                        "fwunit does not support grants to other SGs (found in %s)", sg.id)
-                    continue
-                src = IPSet([IP(grant.cidr_ip)])
+                if grant.cidr_ip:
+                    src = IPSet([IP(grant.cidr_ip)])
+                else:
+                    src = ips_by_sg.get(grant.group_id, None)
+                    if not src:
+                        logger.debug(
+                            "ignoring rule for empty security group %s",
+                            grant.group_id)
+                        continue
                 rules.append(Rule(
                     src=src, dst=dst, app=str(sgrule),
                     name="{}/sg={}".format(name, sg.name)))
