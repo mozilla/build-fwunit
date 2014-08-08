@@ -15,6 +15,7 @@ setup(
         "IPy",
         "nose",
         "blessings",
+        "PyYAML",
     ],
     extras_require={
         'srx': [
@@ -26,8 +27,11 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            'fwunit-srx = fwunit.srx.scripts:main [srx]',
-            'fwunit-aws = fwunit.aws.scripts:main [aws]',
+            'fwunit = fwunit.scripts:main',
+        ],
+        "fwunit.types": [
+            'srx = fwunit.srx.scripts:run [srx]',
+            'aws = fwunit.aws.scripts:run [aws]',
         ],
     },
     license='MPL2',

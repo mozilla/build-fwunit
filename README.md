@@ -24,12 +24,13 @@ This package handles the first part entirely, and provides a set of utility
 functions you can use in your tests.  You can write tests using whatever Python
 testing framework you like.  We recommend [nose](http://nose.readthedocs.org/).
 
-Supported Systems
-=================
+Supported Policy Types
+======================
 
-`fwunit` can read data from:
+`fwunit` can read policies from:
 
  * [`srx`] Juniper SRXes, using manually downloaded XML files
+ * [`aws`] Amazon EC2 security groups and VPC subnets
 
 Installation
 ============
@@ -43,6 +44,36 @@ where the bit in brackets lists the systems you'd like to process, from the sect
 Processing Policies
 ===================
 
+The `fwunit` command processes a YAML-formatted configuration file describing a
+set of "sources" of rule data.  Each top-level key describes a source, and must
+have a `type` field giving the type of data to be read -- see "Supported
+Systems", above.  Each must also have an `output` field giving the filename to
+write the generated rules to (relative to the configuration file).
+
+The source may optionally have a `require` field giving a list of other sources
+which should be processed first.
+
+Any additional fields are passed to the policy-type plugin.
+
+Example:
+
+```
+fw1_releng:
+    type: srx
+    output: fw1_releng.pkl
+    security-policies-xml: fw1_releng_scl3_show_security_policies.xml
+    route-xml: fw1_releng_scl3_show_route.xml
+    configuration-security-zones-xml: fw1_releng_scl3_show_configuration_security_zones.xml
+
+aws_releng:
+    type: aws
+    output: aws_releng.pkl
+    dynamic_subnets: [build, test, try, build.servo, bb]
+    regions: [us-east-1, us-west-1, us-west-2]
+```
+
+You can pass one or more source names to `fwunit` to only process those sources.
+
 Juniper SRX
 -----------
 
@@ -52,14 +83,18 @@ First, download the relevant XML from your firewall:
     fw1> show security policies | display xml | save security_policies.xml
     fw1> show configuration security zones | display xml | save configuration_security_zones.xml
 
-and then copy those `.xml` files somewhere local using scp, and run
-`fwunit-srx` against them:
+and then copy those `.xml` files somewhere local using scp.  Configure them in your source:
 
-    $ fwunit-srx \
-        --route-xml=route.xml \
-        --security-policies-xml=security_policies.xml \
-        --configuration-security-zones-xml=configuration_security_zones.xml \
-        --output=rules.pkl
+```
+myfirewall:
+    type: srx
+    output: myfirewall.pkl
+    security-policies-xml: fw1_releng_scl3_show_security_policies.xml
+    route-xml: fw1_releng_scl3_show_route.xml
+    configuration-security-zones-xml: fw1_releng_scl3_show_configuration_security_zones.xml
+```
+
+and run `fwunit`.
 
 This process may take a while, depending on the complexity of your policies.
 
@@ -82,12 +117,20 @@ Amazon EC2 Security Groups
 --------------------------
 
 Set up your `~/.boto` with an account that has access to EC2 and VPC
-administrative information.  Then run
+administrative information.
 
-    $ fwunit-aws --output=rules.pkl
+In your source configuration, include `dynamic_subnets` listing the names or
+id's of all dynamic subnets (see below).  Also include a `regions` field
+listing the regions in which you have hosts.
 
-Adding `--dynamic-subnet NAME_OR_ID` for each dynamic subnet (see below) in
-your configuration.
+Example:
+```
+my_aws_stuff:
+    type: aws
+    output: my_aws_stuff.pkl
+    dynamic_subnets: [workers]
+    regions: [us-east-1, us-west-1]
+```
 
 ### Assumptions ###
 
