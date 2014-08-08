@@ -29,7 +29,16 @@ Supported Systems
 
 `fwunit` can read data from:
 
- * Juniper SRXes, using manually downloaded XML files
+ * [`srx`] Juniper SRXes, using manually downloaded XML files
+
+Installation
+============
+
+To install, set up a [Python virtualenv](https://virtualenv.pypa.io/) and then run
+
+    pip install fwunit[srx,aws]
+
+where the bit in brackets lists the systems you'd like to process, from the section above.
 
 Processing Policies
 ===================
@@ -68,6 +77,49 @@ This processing makes the following assumpotions about your network
 
   * Policies allowing application "any" are expanded to include every
     application mentioned in any policy.
+
+Amazon EC2 Security Groups
+--------------------------
+
+Set up your `~/.boto` with an account that has access to EC2 and VPC
+administrative information.  Then run
+
+    $ fwunit-aws --output=rules.pkl
+
+Adding `--dynamic-subnet NAME_OR_ID` for each dynamic subnet (see below) in
+your configuration.
+
+### Assumptions ###
+
+This processing makes some assumptions about your EC2 layout.  These worked for
+us in Mozilla Releng, but may not work for you.
+
+ * Network ACLs are not in use
+
+ * All traffic is contained in subnets in one or more VPCs.
+
+ * Each subnet is either *per-host* or *dynamic*, as described below.
+
+ * Outbound rules are not used.
+
+ * Inbound rules are always specified with an IP-based source, not another security group.
+
+ * Subnets with the same name are configured identically.  Such subnets are
+   often configured to achieve AZ/region separation.
+
+The Release Engineering AWS environment contains two types of instances, which
+always appear in different subnets.  Long-lived instances sit at a single IP
+for a long time, acting like traditional servers.  The subnets holding such
+instances are considered "per-host" subnets, and the destination IPs for
+`fwunit` rules are determined by examining the IP addresses and security groups
+of the instances in the subnets.  All traffic to IPs not assigned to an
+instance is implicitly denied.
+
+The instances that perform build, test, and release tasks are transient,
+created and destroyed as economics and load warrant.  Subnets containing such
+instances are considered "dynamic", and a security group that applies to any
+instance in the subnet is assumed to apply to the subnet's entire CIDR block.
+This means that 
 
 Writing Tests
 =============

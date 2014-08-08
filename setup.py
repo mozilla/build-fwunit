@@ -16,9 +16,18 @@ setup(
         "nose",
         "blessings",
     ],
+    extras_require={
+        'srx': [
+        ],
+        'aws': [
+            'boto',
+            'repoze.lru',
+        ]
+    },
     entry_points={
         "console_scripts": [
-            'fwunit-srx = fwunit.srx.scripts:main',
+            'fwunit-srx = fwunit.srx.scripts:main [srx]',
+            'fwunit-aws = fwunit.aws.scripts:main [aws]',
         ],
     },
     license='MPL2',
