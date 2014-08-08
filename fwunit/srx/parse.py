@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import xml.etree.ElementTree as ET
-from .ip import IP, IPSet
+from fwunit.ip import IP, IPSet
 from logging import getLogger
 
 log = getLogger(__name__)

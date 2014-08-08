@@ -18,7 +18,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            'fwunit-prep = fwunit.scripts:prep',
+            'fwunit-srx = fwunit.srx.scripts:main',
         ],
     },
     license='MPL2',

@@ -5,7 +5,7 @@
 import itertools
 from fwunit.ip import IPSet, IPPairs
 from fwunit.types import Rule
-from fwunit.parse import Policy
+from .parse import Policy
 from logging import getLogger
 
 log = getLogger(__name__)
@@ -49,8 +49,6 @@ def process_attached_networks(routes):
     # return a list of networks to which this firewall is directly connected,
     # so there is no "next hop".
     log.info("calculating attached networks")
-    import pprint
-    pprint.pprint([(r.destination, r.interface) for r in routes if r.is_local])
     networks = [IPSet([r.destination]) for r in routes if r.is_local]
     return networks
 
