@@ -5,46 +5,46 @@
 import collections
 from fwunit.ip import IP, IPSet
 import logging
-import itertools
 from fwunit.types import Rule
 from fwunit.common import simplify_rules
 from fwunit.common import combine_names
-from collections import namedtuple
 
 logger = logging.getLogger(__name__)
 
-AddressSpace = collections.namedtuple("AddressSpace", ['rules', 'ip_space', 'name'])
+AddressSpace = collections.namedtuple(
+    "AddressSpace", ['rules', 'ip_space', 'name'])
+
 
 def combine(input_rules):
     # translate from config (YAML data) into actual IPSets
     address_spaces = []
     all_apps = set()
     for name, info in input_rules.iteritems():
-        rules = info['rules']
-        ranges = info['ranges']
-        ip_space = IPSet([IP(s) for s in ranges])
+        ip_space = IPSet([IP(s) for s in info['ip_space']])
         rules_by_app = {}
-        for r in rules:
+        for r in info['rules']:
             rules_by_app.setdefault(r.app, []).append(r)
         all_apps = all_apps | set(rules_by_app)
-        address_spaces.append(AddressSpace(rules=rules_by_app, ip_space=ip_space,
-                                           name=name))
+        address_spaces.append(
+            AddressSpace(rules=rules_by_app, ip_space=ip_space,
+                         name=name))
 
-    # add an "other" address space allowing all flows into or out of managed ip
+    # add an "unmanaged" address space allowing all flows into or out of managed ip
     # space, but not between unmanaged IPs (the latter restriction effectively
     # omits uninteresting flows)
     managed_space = IPSet([])
     for sp in address_spaces:
         managed_space += sp.ip_space
-    other_space = IPSet([IP('0.0.0.0/0')]) - managed_space
-    if other_space:
+    unmanaged_space = IPSet([IP('0.0.0.0/0')]) - managed_space
+    if unmanaged_space:
         rules = {
-            app: [Rule(src=managed_space, dst=other_space,
+            app: [Rule(src=managed_space, dst=unmanaged_space,
                        app=app, name="unmanaged-{}".format(app)),
-                  Rule(src=other_space, dst=managed_space,
+                  Rule(src=unmanaged_space, dst=managed_space,
                        app=app, name="unmanaged-{}".format(app))]
             for app in all_apps}
-        address_spaces.append(AddressSpace(rules=rules, ip_space=other_space, name="unmanaged"))
+        address_spaces.append(
+            AddressSpace(rules=rules, ip_space=unmanaged_space, name="unmanaged"))
 
     combined_rules = []
     for app in all_apps:
@@ -84,4 +84,3 @@ def combine(input_rules):
 
     rules = simplify_rules(combined_rules)
     return rules
-

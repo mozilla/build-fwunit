@@ -5,14 +5,15 @@
 from . import process
 import cPickle as pickle
 
+
 def run(cfg, fwunit_cfg):
     input_rules = {}
-    for name, ranges in cfg['address_spaces'].iteritems():
-        if not isinstance(ranges, list):
-            ranges = [ranges]
+    for name, ip_space in cfg['address_spaces'].iteritems():
+        if not isinstance(ip_space, list):
+            ip_space = [ip_space]
         # look up and load the input's rules
         pkl = fwunit_cfg[name]['output']
         rules = pickle.load(open(pkl))
-        input_rules[name] = dict(rules=rules, ranges=ranges)
+        input_rules[name] = dict(rules=rules, ip_space=ip_space)
 
     return process.combine(input_rules)

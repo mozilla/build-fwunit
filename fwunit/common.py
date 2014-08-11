@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 def combine_names(name1, name2):
     """Combine rule names, keeping all source names but removing duplicates"""
     names = set(name1.split('+')) | set(name2.split('+'))
-    return '+'.join(names)
+    # as a special case, ignore 'unmanaged-*' names, as they add no useful information
+    names = [n for n in names if not n.startswith('unmanaged-')]
+    return '+'.join(sorted(names))
 
 
 def simplify_rules(rules):
