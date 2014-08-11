@@ -55,3 +55,22 @@ def simplify_rules(rules):
     rules = list(itertools.chain(*rules_by_app.values()))
     logger.debug(" result: %d rules", len(rules))
     return rules
+
+
+class ApplicationMap(object):
+    """Handle the common 'application-map' configuration."""
+
+    def __init__(self, config):
+        self._map = config.get('application-map', {})
+        # check for duplicate values
+        seen = set()
+        for v in self._map.itervalues():
+            if v in seen:
+                raise RuntimeError("duplicate common application name {}".format(v))
+            seen.add(v)
+
+    def __getitem__(self, app):
+        return self._map.get(app, app)
+
+    def keys(self):
+        return self._map.keys()

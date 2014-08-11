@@ -16,7 +16,7 @@ Subnet = namedtuple('Subnet', ['cidr_block', 'name', 'dynamic'])
 SecurityGroupId = namedtuple('SecurityGroupId', ['id', 'region'])
 
 
-def get_rules(regions, dynamic_subnets):
+def get_rules(app_map, regions, dynamic_subnets):
     if not regions:
         logger.info("Getting all regions")
         regions = aws.all_regions()
@@ -102,9 +102,19 @@ def get_rules(regions, dynamic_subnets):
                             "ignoring rule for empty security group %s",
                             grant.group_id)
                         continue
+                proto = str(sgrule.ip_protocol)
+                if proto == '-1':
+                    proto = 'any'
+                if sgrule.from_port == sgrule.to_port:
+                    if str(sgrule.from_port) == "None":
+                        app = "*/{}".format(proto)
+                    else:
+                        app = '{}/{}'.format(sgrule.from_port, proto)
+                else:
+                    app = '{}-{}/{}'.format(sgrule.from_port, sgrule.to_port, proto)
+                app = app_map[app]
                 rules.append(Rule(
-                    src=src, dst=dst, app=str(sgrule),
-                    name="{}/sg={}".format(name, sg.name)))
+                    src=src, dst=dst, app=app, name="{}/sg={}".format(name, sg.name)))
 
     logger.info("writing rules for dynamic subnets")
     for subnet_name, sgids in sgs_by_dynamic_subnet.iteritems():

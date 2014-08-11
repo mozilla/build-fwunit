@@ -11,7 +11,7 @@ from logging import getLogger
 
 logger = getLogger(__name__)
 
-def policies_to_rules(firewall):
+def policies_to_rules(app_map, firewall):
     """Process the data in a parse.Firewall instance into a list of non-overlapping
     Rule instances, suitable for queries"""
     interface_ips = process_interface_ips(firewall.routes)
@@ -22,7 +22,8 @@ def policies_to_rules(firewall):
         policies_by_zone_pair, zone_nets, attached_networks)
     src_per_policy, dst_per_policy = process_address_sets_per_policy(
         firewall.zones, policies_by_zone_pair)
-    return process_rules(firewall.policies, zone_nets, policies_by_zone_pair, src_per_policy,
+    return process_rules(app_map, firewall.policies, zone_nets,
+                         policies_by_zone_pair, src_per_policy,
                          dst_per_policy)
 
 
@@ -124,8 +125,8 @@ def process_address_sets_per_policy(zones, policies_by_zone_pair):
     return src_per_policy, dst_per_policy
 
 
-def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy,
-                  dst_per_policy):
+def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
+                  src_per_policy, dst_per_policy):
     logger.info("processing rules by application")
     # turn policies into a list of Rules (permit only), limited by zone,
     # that do not overlap.  The tricky bit here is processing policies in
@@ -135,6 +136,7 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy,
     # used anywhere.
     rules_by_app = {}
     all_apps = set(itertools.chain(*[p.applications for p in policies]))
+    all_apps = all_apps | set(app_map.keys())
     if 'any' in all_apps:
         all_apps.remove('any')
     for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
@@ -163,7 +165,7 @@ def process_rules(policies, zone_nets, policies_by_zone_pair, src_per_policy,
                         s = s & src
                         d = d & dst
                         if len(s) and len(d):
-                            rules.append(Rule(s, d, app, pol.name))
+                            rules.append(Rule(s, d, app_map[app], pol.name))
                             rule_count += 1
                 # regardless, consider this src/dst pair matched
                 remaining_pairs = remaining_pairs - IPPairs((src, dst))
