@@ -6,7 +6,7 @@ from . import process
 from fwunit import common
 
 
-def run(cfg):
+def run(cfg, fwunit_cfg):
     app_map = common.ApplicationMap(cfg)
     regions = cfg.get('regions', None)
     dynamic_subnets = cfg.get('dynamic_subnets', [])

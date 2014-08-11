@@ -81,6 +81,6 @@ def main():
         output = src_cfg['output']
 
         logger.warning("running %s", source)
-        rules = ep(src_cfg)
+        rules = ep(src_cfg, cfg)
         logger.warning("writing resulting rules to %s", output)
         pickle.dump(rules, open(output, "w"))

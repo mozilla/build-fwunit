@@ -9,7 +9,8 @@ from .types import Rule
 logger = logging.getLogger(__name__)
 
 
-def _combine_names(name1, name2):
+def combine_names(name1, name2):
+    """Combine rule names, keeping all source names but removing duplicates"""
     names = set(name1.split('+')) | set(name2.split('+'))
     return '+'.join(names)
 
@@ -38,7 +39,7 @@ def simplify_rules(rules):
                         rule = Rule(last.src + rule.src,
                                     last.dst + rule.dst,
                                     app,
-                                    _combine_names(last.name, rule.name))
+                                    combine_names(last.name, rule.name))
                         rv[-1] = rule
                         combined += 1
                     else:

@@ -32,6 +32,7 @@ setup(
         "fwunit.types": [
             'srx = fwunit.srx.scripts:run [srx]',
             'aws = fwunit.aws.scripts:run [aws]',
+            'combine = fwunit.combine.scripts:run',
         ],
     },
     license='MPL2',

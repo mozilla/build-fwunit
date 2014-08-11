@@ -7,7 +7,7 @@ from .process import policies_to_rules
 from fwunit import common
 
 
-def run(cfg):
+def run(cfg, fwunit_cfg):
     app_map = common.ApplicationMap(cfg)
     firewall = Firewall(
         security_policies_xml=open(cfg['security-policies-xml']),
