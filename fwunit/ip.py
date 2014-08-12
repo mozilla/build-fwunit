@@ -64,27 +64,29 @@ class IPSet(IPy.IPSet):
     def __eq__(self, other):
         return self.prefixes == other.prefixes
 
+    def __lt__(self, other):
+        return self.prefixes < other.prefixes
+
 
 class IPPairs(object):
-
-    """
-    Reasonably compact representation of a set of source-destination pairs,
-    with the ability to do some basic arithmetic.
-    """
+    """Reasonably compact representation of a set of source-destination pairs,
+    with the ability to do some basic arithmetic."""
 
     def __init__(self, *pairs):
-        self._pairs = sorted(pairs)
+        self._pairs = list(pairs)
+        self._optimize()
 
     def __iter__(self):
         return self._pairs.__iter__()
 
     def __eq__(self, other):
-        # this isn't quite right, as there are several ways to describe
-        # a particular set of IP pairs as sets of IPSets
+        # TODO: this can show equal IPPairs that have been constructed
+        # differently as different.  It's good enough for tests.
         return self._pairs == other._pairs
 
     def __repr__(self):
-        return 'IPPairs(*[\n%s\n])' % ('\n'.join("  " + `p` for p in self._pairs))
+        return 'IPPairs(*[\n%s\n])' % ('\n'.join("  " + 
+           '%r\n   -> %r' % p for p in self._pairs))
 
     def __sub__(self, other):
         new_pairs = []
@@ -100,30 +102,26 @@ class IPPairs(object):
                         new_pairs.append(pair)
         return IPPairs(*new_pairs)
 
+    def _optimize(self):
+        if len(self._pairs) < 2:
+            return
+        while True:
+            changed = False
+            for reverse in 1, 0:  # finish with non-reversed
+                self._pairs.sort(key=(lambda p: tuple(reversed(p)) if reverse else None))
+                i = len(self._pairs) - 2
+                while i >= 0:
+                    if self._pairs[i][reverse] == self._pairs[i+1][reverse]:
+                        if reverse:
+                            self._pairs[i] = (self._pairs[i][0] + self._pairs[i+1][0], self._pairs[i][1])
+                        else:
+                            self._pairs[i] = (self._pairs[i][0], self._pairs[i][1] + self._pairs[i+1][1])
+                        del self._pairs[i+1]
+                        changed = True
+                    i -= 1
+            if not changed:
+                break
+
     def __nonzero__(self):
         return len(self._pairs) != 0
 
-    @classmethod
-    def test(cls):
-        any = IPSet([IP('0.0.0.0/0')])
-        ten = IPSet([IP('10.0.0.0/8')])
-        ten26 = IPSet([IP('10.26.0.0/16')])
-        ten33 = IPSet([IP('10.33.0.0/16')])
-        print IPPairs((any, any)) - IPPairs((any, ten))
-        print IPPairs((any, any)) - IPPairs((any, ten)) - IPPairs((any, ten26))
-        print IPPairs((any, any)) - IPPairs((any, ten)) - IPPairs((ten26, any))
-        print IPPairs((any, ten26 + ten33)) - IPPairs((any, ten))
-
-if __name__ == "__main__":
-    # simple unit tests for .isdisjoint
-    assert IPSet([IP('0.0.0.0/1')]).isdisjoint(IPSet([IP('128.0.0.0/1')]))
-    assert not IPSet([IP('0.0.0.0/1')]).isdisjoint(IPSet([IP('0.0.0.0/2')]))
-    assert not IPSet([IP('0.0.0.0/2')]).isdisjoint(IPSet([IP('0.0.0.0/1')]))
-    assert not IPSet([IP('0.0.0.0/2')]).isdisjoint(IPSet([IP('0.1.2.3')]))
-    assert not IPSet([IP('0.1.2.3')]).isdisjoint(IPSet([IP('0.0.0.0/2')]))
-    assert IPSet([IP('1.1.1.1'), IP('1.1.1.3')]).isdisjoint(
-        IPSet([IP('1.1.1.2'), IP('1.1.1.4')]))
-    assert not IPSet([IP('1.1.1.1'), IP('1.1.1.3'), IP(
-        '1.1.2.0/24')]).isdisjoint(IPSet([IP('1.1.2.2'), IP('1.1.1.4')]))
-
-    # IPSet doesn't support ==, so testing __and__ is difficult
