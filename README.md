@@ -157,6 +157,25 @@ my_aws_stuff:
     regions: [us-east-1, us-west-1]
 ```
 
+### Security Policy ###
+
+The user accessing Amazon should have the following security policy:
+
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "ec2:DescribeInstances",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeSecurityGroups"
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
+
 ### Assumptions ###
 
 This processing makes some assumptions about your EC2 layout.  These worked for
