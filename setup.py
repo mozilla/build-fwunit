@@ -22,7 +22,6 @@ setup(
         ],
         'aws': [
             'boto',
-            'repoze.lru',
         ]
     },
     entry_points={

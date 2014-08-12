@@ -148,6 +148,10 @@ In your source configuration, include `dynamic_subnets` listing the names or
 id's of all dynamic subnets (see below).  Also include a `regions` field
 listing the regions in which you have hosts.
 
+You can include the credentials for an IAM user in the configuration.  If this
+is omitted, boto's normal credential search process will apply, including
+searching `~/.boto` and instance role credentials.
+
 Example:
 ```
 my_aws_stuff:
@@ -155,6 +159,9 @@ my_aws_stuff:
     output: my_aws_stuff.pkl
     dynamic_subnets: [workers]
     regions: [us-east-1, us-west-1]
+    credentials:
+        access_key: "ACCESS KEY"
+        secret_key: "SECRET KEY"
 ```
 
 ### Security Policy ###

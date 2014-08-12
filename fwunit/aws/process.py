@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from . import aws
 import bisect
 from fwunit.ip import IP, IPSet
 import logging
@@ -16,7 +15,7 @@ Subnet = namedtuple('Subnet', ['cidr_block', 'name', 'dynamic'])
 SecurityGroupId = namedtuple('SecurityGroupId', ['id', 'region'])
 
 
-def get_rules(app_map, regions, dynamic_subnets):
+def get_rules(aws, app_map, regions, dynamic_subnets):
     if not regions:
         logger.info("Getting all regions")
         regions = aws.all_regions()
