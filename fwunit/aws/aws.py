@@ -66,12 +66,4 @@ class AWS(object):
         sgs = conn.get_all_security_groups(group_ids=[sgid.id])
         if not sgs:
             return None
-        sg = sgs[0]
-        # verify it doesn't have outbound rules
-        msg = "fwunit assumes outbound rules are unrestricted (the default)"
-        assert len(sg.rules_egress) == 1, msg
-        assert sg.rules_egress[0].ip_protocol == "-1", msg
-        assert sg.rules_egress[0].from_port == None, msg
-        assert sg.rules_egress[0].to_port == None, msg
-        self._security_groups[sgid] = sg
-        return sg
+        return sgs[0]
