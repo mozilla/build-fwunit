@@ -83,8 +83,9 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
                    for g in instance.groups)
 
     rules = []
+    all_apps = set(app_map.values())
 
-    def make_rules(name, sgid, local):
+    def make_rules(sgid, local):
         sg = aws.get_security_group(sgid)
         if not sg:
             logger.warning(
@@ -106,24 +107,31 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
                     if proto == '-1':
                         proto = 'any'
                     if sgrule.from_port == sgrule.to_port:
-                        if str(sgrule.from_port) == "None":
+                        if str(sgrule.from_port) in ("None", "-1"):
                             app = "*/{}".format(proto)
                         else:
                             app = '{}/{}'.format(sgrule.from_port, proto)
                     else:
                         app = '{}-{}/{}'.format(sgrule.from_port, sgrule.to_port, proto)
-                    app = app_map[app]
-                    src, dst = (remote, local) if dir == 'in' else (local, remote)
-                    name = "{}/sg={}/{}".format(name, sg.name, dir)
-                    rules.append(Rule(src=src, dst=dst, app=app, name=name))
-                    print rules[-1]
+                    if app == '*/any':
+                        # TODO: need a better list of all apps..
+                        apps = all_apps
+                    else:
+                        app = app_map[app]
+                        all_apps.add(app)
+                        apps = [app]
+                    for app in apps:
+                        src, dst = (remote, local) if dir == 'in' else (local, remote)
+                        name = "sg={}/{}".format(sg.name, dir)
+                        rules.append(Rule(src=src, dst=dst, app=app, name=name))
+                        print rules[-1]
 
     logger.info("writing rules for dynamic subnets")
     for subnet_name, sgids in sgs_by_dynamic_subnet.iteritems():
         subnet = dynamic_ipsets[subnet_name]
         logger.debug(" subnet %s, %s", subnet_name, subnet)
         for sgid in sgids:
-            make_rules('subnet=' + subnet_name, sgid, subnet)
+            make_rules(sgid, subnet)
 
     logger.info("writing rules for instance in per-host subnets")
     for inst_name, info in sgs_by_instance.iteritems():
@@ -131,7 +139,7 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
         logger.debug(" instance %s at %s", inst_name, ip)
         host_ip = IPSet([ip])
         for sgid in sgids:
-            make_rules('per-host', sgid, host_ip)
+            make_rules(sgid, host_ip)
 
     rules = simplify_rules(rules)
     return rules

@@ -77,3 +77,6 @@ class ApplicationMap(object):
 
     def keys(self):
         return self._map.keys()
+
+    def values(self):
+        return self._map.values()
