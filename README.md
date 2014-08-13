@@ -270,6 +270,24 @@ def test_puppetmaster_access():
         fw1.assertPermits(internal_network, puppetmasters, app)
 ```
 
+Querying
+========
+
+Aside from writing unit tests, you can query against a rule source with
+`fwunit-query`.
+
+For example:
+
+```
+fwunit-query enterprise 10.10.1.1 192.168.1.1 ssh
+Flow permitted
+```
+
+See the script's `--help` for more detail.
+
+Implementation Notes
+====================
+
 IP Objects
 ----------
 
@@ -281,7 +299,7 @@ represent sets of IP pairs.
 All of these classes can be imported from ``fwunit.ip``.
 
 Rules
-=====
+-----
 
 The output of the processing step is a pickled list of Rule objects.
 

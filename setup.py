@@ -27,6 +27,7 @@ setup(
     entry_points={
         "console_scripts": [
             'fwunit = fwunit.scripts:main',
+            'fwunit-query = fwunit.scripts:query',
         ],
         "fwunit.types": [
             'srx = fwunit.srx.scripts:run [srx]',
