@@ -17,7 +17,6 @@ class AWS(object):
     def __init__(self, access_key=None, secret_key=None):
         self.access_key = access_key
         self.secret_key = secret_key
-        self._security_groups = {}
 
     def get_ec2_connection(self, region):
         if not self._ec2_connection:
@@ -59,8 +58,6 @@ class AWS(object):
         return all_instances
 
     def get_security_group(self, sgid):
-        if sgid in self._security_groups:
-            return self._security_groups[sgid]
         logger.debug("fetching security group %s in %s", sgid.id, sgid.region)
         conn = self.get_ec2_connection(sgid.region)
         sgs = conn.get_all_security_groups(group_ids=[sgid.id])

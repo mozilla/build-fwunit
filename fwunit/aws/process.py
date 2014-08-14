@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import bisect
+import itertools
 from fwunit.ip import IP, IPSet
 import logging
 from fwunit.types import Rule
@@ -48,8 +49,9 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
             return subnets[i - 1]
 
     logger.info("examining instances")
-    sgs_by_dynamic_subnet = {}  # {subnet name: set of SecurityGroupIds}
-    sgs_by_instance = {}  # {instance_name: [ip, set of SecurityGroupIds]}
+    sgids_by_dynamic_subnet = {}  # {subnet name: set of SecurityGroupIds}
+    sgids_by_instance = {}  # {instance_name: [ip, set of SecurityGroupIds]}
+    all_sgids = set()
     ips_by_sg = {}  # {group id: IPSet}
     for id, instance in aws.get_all_instances(regions).iteritems():
         if instance.state == 'terminated' or instance.state == 'shutting-down':
@@ -74,67 +76,72 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
             continue
 
         if subnet.dynamic:
-            sgset = sgs_by_dynamic_subnet.setdefault(subnet.name, set())
+            sgset = sgids_by_dynamic_subnet.setdefault(subnet.name, set())
         else:
             inst_name = instance.tags.get('Name', instance.id)
             sgset = set()
-            sgs_by_instance[inst_name] = [ip, sgset]
-        sgset.update(SecurityGroupId(g.id, instance.region.name)
-                   for g in instance.groups)
+            sgids_by_instance[inst_name] = [ip, sgset]
+        new_sgids = set(SecurityGroupId(g.id, instance.region.name)
+                        for g in instance.groups)
+        sgset.update(new_sgids)
+        all_sgids.update(new_sgids)
+
+    logger.info("accumulating security groups")
+    all_apps = set(app_map.values())
+    security_groups = {}
+    for sgid in all_sgids:
+        sg = security_groups[sgid] = aws.get_security_group(sgid)
+        # pre-process all of the rules' apps now
+        for sgrule in itertools.chain(sg.rules, sg.rules_egress):
+            proto = str(sgrule.ip_protocol)
+            if proto == '-1':
+                proto = 'any'
+            if sgrule.from_port == sgrule.to_port:
+                if str(sgrule.from_port) in ("None", "-1"):
+                    app = "*/{}".format(proto)
+                else:
+                    app = '{}/{}'.format(sgrule.from_port, proto)
+            else:
+                app = '{}-{}/{}'.format(sgrule.from_port, sgrule.to_port, proto)
+            app = app_map[app]
+            sgrule.app = app
+            all_apps.add(app)
 
     rules = []
-    all_apps = set(app_map.values())
 
     def make_rules(sgid, local):
-        sg = aws.get_security_group(sgid)
+        sg = security_groups[sgid]
         if not sg:
             logger.warning(
                 "No such security group %s in %s", sgid.sgid, sgid.region)
             return
         for dir, sgrules in [('in', sg.rules), ('out', sg.rules_egress)]:
             for sgrule in sgrules:
-                for grant in sgrule.grants:
-                    if grant.cidr_ip:
-                        remote = IPSet([IP(grant.cidr_ip)])
-                    else:
-                        remote = ips_by_sg.get(grant.group_id, None)
-                        if not remote:
-                            logger.debug(
-                                "ignoring rule for empty security group %s",
-                                grant.group_id)
-                            continue
-                    proto = str(sgrule.ip_protocol)
-                    if proto == '-1':
-                        proto = 'any'
-                    if sgrule.from_port == sgrule.to_port:
-                        if str(sgrule.from_port) in ("None", "-1"):
-                            app = "*/{}".format(proto)
+                if sgrule.app == '*/any':
+                    apps = all_apps
+                else:
+                    apps = [sgrule.app]
+                for app in apps:
+                    for grant in sgrule.grants:
+                        if grant.cidr_ip:
+                            remote = IPSet([IP(grant.cidr_ip)])
                         else:
-                            app = '{}/{}'.format(sgrule.from_port, proto)
-                    else:
-                        app = '{}-{}/{}'.format(sgrule.from_port, sgrule.to_port, proto)
-                    if app == '*/any':
-                        # TODO: need a better list of all apps..
-                        apps = all_apps
-                    else:
-                        app = app_map[app]
-                        all_apps.add(app)
-                        apps = [app]
-                    for app in apps:
+                            remote = ips_by_sg.get(grant.group_id, None)
+                            if not remote:
+                                continue
                         src, dst = (remote, local) if dir == 'in' else (local, remote)
-                        name = "sg={}/{}".format(sg.name, dir)
+                        name = "{}/{}".format(sg.name, dir)
                         rules.append(Rule(src=src, dst=dst, app=app, name=name))
-                        print rules[-1]
 
     logger.info("writing rules for dynamic subnets")
-    for subnet_name, sgids in sgs_by_dynamic_subnet.iteritems():
+    for subnet_name, sgids in sgids_by_dynamic_subnet.iteritems():
         subnet = dynamic_ipsets[subnet_name]
         logger.debug(" subnet %s, %s", subnet_name, subnet)
         for sgid in sgids:
             make_rules(sgid, subnet)
 
     logger.info("writing rules for instance in per-host subnets")
-    for inst_name, info in sgs_by_instance.iteritems():
+    for inst_name, info in sgids_by_instance.iteritems():
         ip, sgids = info
         logger.debug(" instance %s at %s", inst_name, ip)
         host_ip = IPSet([ip])
