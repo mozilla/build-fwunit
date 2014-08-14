@@ -61,7 +61,6 @@ def main():
         if source in ordered_sources:
             return
         for req in requirements[source]:
-            print "{} req {}".format(source, req)
             if req not in cfg:
                 parser.error("unknown requirement '{}'".format(source))
             require(req)
