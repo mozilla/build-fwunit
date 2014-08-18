@@ -11,29 +11,30 @@ logger = logging.getLogger(__name__)
 
 class AWS(object):
     
-    _ec2_connection = None
-    _vpc_connection = None
-
     def __init__(self, access_key=None, secret_key=None):
+        self._ec2_connections = {}
+        self._vpc_connections = {}
         self.access_key = access_key
         self.secret_key = secret_key
 
     def get_ec2_connection(self, region):
-        if not self._ec2_connection:
-            self._ec2_connection =  boto.ec2.connect_to_region(
+        if region not in self._ec2_connections:
+            self._ec2_connections[region] = \
+                boto.ec2.connect_to_region(
                     region,
                     aws_access_key_id=self.access_key,
                     aws_secret_access_key=self.secret_key)
-        return self._ec2_connection
+        return self._ec2_connections[region]
 
     def get_vpc_connection(self, region):
-        if not self._vpc_connection:
+        if region not in self._vpc_connections:
             conn = self.get_ec2_connection(region)
-            self._vpc_connection = boto.vpc.VPCConnection(
+            self._vpc_connections[region] = \
+                boto.vpc.VPCConnection(
                     region=conn.region,
                     aws_access_key_id=self.access_key,
                     aws_secret_access_key=self.secret_key)
-        return self._vpc_connection
+        return self._vpc_connections[region]
 
     def all_regions(self, ):
         regions = boto.ec2.regions()
