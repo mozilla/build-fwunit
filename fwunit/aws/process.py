@@ -111,13 +111,9 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
 
     def make_rules(sgid, local):
         sg = security_groups[sgid]
-        if not sg:
-            logger.warning(
-                "No such security group %s in %s", sgid.sgid, sgid.region)
-            return
         for dir, sgrules in [('in', sg.rules), ('out', sg.rules_egress)]:
             for sgrule in sgrules:
-                if sgrule.app == '*/any':
+                if sgrule.app == 'any':
                     apps = all_apps
                 else:
                     apps = [sgrule.app]
@@ -140,7 +136,7 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
         for sgid in sgids:
             make_rules(sgid, subnet)
 
-    logger.info("writing rules for instance in per-host subnets")
+    logger.info("writing rules for instances in per-host subnets")
     for inst_name, info in sgids_by_instance.iteritems():
         ip, sgids = info
         logger.debug(" instance %s at %s", inst_name, ip)
