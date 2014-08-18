@@ -36,11 +36,14 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
 
     logger.info("collecting dynamic subnet IP ranges")
     dynamic_ipsets = {}
+    per_host_subnet_ips = IPSet()
     for subnet in subnets:
         if subnet.dynamic:
             ipset = dynamic_ipsets.get(subnet.name, IPSet([]))
             ipset += IPSet([subnet.cidr_block])
             dynamic_ipsets[subnet.name] = ipset
+        else:
+            per_host_subnet_ips += IPSet([subnet.cidr_block])
 
     # sort by IP subnet, so we can use a binary search
     logger.info("sorting subnets by IP")
@@ -158,13 +161,20 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
             make_rules(sgid, subnet)
 
     logger.info("writing rules for instances in per-host subnets")
-    # TODO: assume outbound allows any from all IPs in per-host subnets?
+    per_host_host_ips = IPSet()
     for inst_name, info in sgids_by_instance.iteritems():
         ip, sgids = info
         logger.debug(" instance %s at %s", inst_name, ip)
         host_ip = IPSet([ip])
+        per_host_host_ips += host_ip
         for sgid in sgids:
             make_rules(sgid, host_ip)
+
+    logger.info("assuming unrestricted outbound access from unoccupied IPs in per-host subnets")
+    unoccupied = per_host_subnet_ips - per_host_host_ips
+    for app in all_apps:
+        rules.append(Rule(src=unoccupied, dst=unmanaged_ip_space, app=app, name='unoccupied/out'))
+        to_intersect.setdefault(app, {}).setdefault('out', []).append((unoccupied, managed_ip_space, 'unoccupied/out'))
 
     # traffic within the manage Ip space is governed both by outbound rules on
     # the source and inbound rules on the destination.

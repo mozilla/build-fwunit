@@ -194,9 +194,7 @@ us in Mozilla Releng, but may not work for you.
 
  * Each subnet is either *per-host* or *dynamic*, as described below.
 
- * Outbound rules are not used.
-
- * Inbound rules are always specified with an IP-based source, not another security group.
+ * All traffic from unoccupied IPs in per-host subnets is implicitly permitted.
 
  * Subnets with the same name are configured identically.  Such subnets are
    often configured to achieve AZ/region separation.
