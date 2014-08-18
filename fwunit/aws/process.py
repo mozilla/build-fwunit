@@ -8,6 +8,7 @@ from fwunit.ip import IP, IPSet
 import logging
 from fwunit.types import Rule
 from fwunit.common import simplify_rules
+from fwunit.common import combine_names
 from collections import namedtuple
 
 logger = logging.getLogger(__name__)
@@ -23,12 +24,15 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
 
     logger.info("collecting subnets")
     subnets = []
+    managed_ip_space = IPSet([])
     for id, subnet in aws.get_all_subnets(regions).iteritems():
         name = subnet.tags.get('Name', id)
         dynamic = name in dynamic_subnets or id in dynamic_subnets
-        subnet = Subnet(
-            cidr_block=IP(subnet.cidr_block), name=name, dynamic=dynamic)
+        cidr_block = IP(subnet.cidr_block)
+        subnet = Subnet(cidr_block=cidr_block, name=name, dynamic=dynamic)
         subnets.append(subnet)
+        managed_ip_space = managed_ip_space + IPSet([cidr_block])
+    unmanaged_ip_space = IPSet([IP('0.0.0.0/0')]) - managed_ip_space
 
     logger.info("collecting dynamic subnet IP ranges")
     dynamic_ipsets = {}
@@ -79,6 +83,8 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
             sgset = sgids_by_dynamic_subnet.setdefault(subnet.name, set())
         else:
             inst_name = instance.tags.get('Name', instance.id)
+            if inst_name in sgids_by_instance:
+                inst_name = inst_name + ' ({})'.format(instance.id)
             sgset = set()
             sgids_by_instance[inst_name] = [ip, sgset]
         new_sgids = set(SecurityGroupId(g.id, instance.region.name)
@@ -108,7 +114,7 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
             all_apps.add(app)
 
     rules = []
-
+    to_intersect = {}
     def make_rules(sgid, local):
         sg = security_groups[sgid]
         for dir, sgrules in [('in', sg.rules), ('out', sg.rules_egress)]:
@@ -127,7 +133,22 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
                                 continue
                         src, dst = (remote, local) if dir == 'in' else (local, remote)
                         name = "{}/{}".format(sg.name, dir)
-                        rules.append(Rule(src=src, dst=dst, app=app, name=name))
+                        # first make rules involving non-managed space, leaving
+                        # only managed-to-managed
+                        if dir == 'in':
+                            unmanaged_src = src & unmanaged_ip_space
+                            if unmanaged_src:
+                                rules.append(Rule(
+                                    src=unmanaged_src, dst=dst, app=app, name=name))
+                            src = src & managed_ip_space
+                        else:
+                            unmanaged_dst = dst & unmanaged_ip_space
+                            if unmanaged_dst:
+                                rules.append(Rule(
+                                    src=src, dst=unmanaged_dst, app=app, name=name))
+                            dst = dst & managed_ip_space
+                        if src and dst:
+                            to_intersect.setdefault(app, {}).setdefault(dir, []).append((src, dst, name))
 
     logger.info("writing rules for dynamic subnets")
     for subnet_name, sgids in sgids_by_dynamic_subnet.iteritems():
@@ -137,12 +158,35 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
             make_rules(sgid, subnet)
 
     logger.info("writing rules for instances in per-host subnets")
+    # TODO: assume outbound allows any from all IPs in per-host subnets?
     for inst_name, info in sgids_by_instance.iteritems():
         ip, sgids = info
         logger.debug(" instance %s at %s", inst_name, ip)
         host_ip = IPSet([ip])
         for sgid in sgids:
             make_rules(sgid, host_ip)
+
+    # traffic within the manage Ip space is governed both by outbound rules on
+    # the source and inbound rules on the destination.
+    logger.info("intersecting inbound and outbound rules")
+    for app, dirs in to_intersect.iteritems():
+        in_rules = dirs.get('in', [])
+        out_rules = dirs.get('out', [])
+        logger.debug("..for %s", app)
+        new_rules = []
+        for inr in in_rules:
+            for outr in out_rules:
+                src = inr[0] & outr[0]
+                if not src:
+                    continue
+                dst = inr[1] & outr[1]
+                if not dst:
+                    continue
+                new_rules.append(Rule(src=src, dst=dst, app=app,
+                                      name=combine_names(inr[2], outr[2])))
+        # simplify now, within this app, to save space and time
+        new_rules = simplify_rules(new_rules)
+        rules.extend(new_rules)
 
     rules = simplify_rules(rules)
     return rules
