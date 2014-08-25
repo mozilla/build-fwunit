@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import IPy
+import bisect
 
 # IPy's IP seems sufficient
 IP = IPy.IP
@@ -49,6 +50,21 @@ class IPSet(IPy.IPSet):
                     r = right.next()
         except StopIteration:
             return IPSet(result)
+
+    # see https://github.com/haypo/python-ipy/pull/25
+    def __contains__(self, ip):
+        assert 0
+        valid_masks = self.prefixtable.keys()
+        if isinstance(ip, IP):
+            #Don't dig through more-specific ranges
+            ip_mask = ip._prefixlen
+            valid_masks = [x for x in valid_masks if x <= ip_mask]
+        for mask in sorted(valid_masks):
+            i = bisect.bisect(self.prefixtable[mask], ip)
+            # Because of sorting order, a match can only occur in the prefix
+            # that comes before the result of the search.
+            if i and ip in self.prefixtable[mask][i - 1]:
+                return True
 
     # override to create instances of the correct class
     def __add__(self, other):
