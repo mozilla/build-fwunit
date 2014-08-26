@@ -122,7 +122,7 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
         sg = security_groups[sgid]
         for dir, sgrules in [('in', sg.rules), ('out', sg.rules_egress)]:
             for sgrule in sgrules:
-                if sgrule.app == 'any':
+                if sgrule.app == '*/any':
                     apps = all_apps
                 else:
                     apps = [sgrule.app]
