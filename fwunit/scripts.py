@@ -12,7 +12,6 @@ import os
 import os.path
 from fwunit import log
 import pkg_resources
-from blessings import Terminal
 
 logger = logging.getLogger(__name__)
 
@@ -90,36 +89,29 @@ def main():
 
 
 def query():
-    import tests
-
-    description = textwrap.dedent("""Query security policies; exits
-            successfully if the flow is allowed, and unsuccessfully if
-            denied.  For queries between networks, if *any* flow between
-            the given networks is denied, the query is unsuccessful.""")
+    description = textwrap.dedent("""Query fwunit rules""")
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--config', '-c',
         help="YAML configuration file", dest='config_file', type=str, default='fwunit.yaml')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--quiet', action='store_true')
-    parser.add_argument('source', help="rule source to query against")
-    # TODO: 'permit' or 'deny'
-    parser.add_argument('src_ip', help="source IP (or network) to query")
-    parser.add_argument('dst_ip', help="destination IP (or network) to query")
-    parser.add_argument('app', help="application to query")
+    subparsers = parser.add_subparsers(
+            title='subcommands',
+            help='Use <subcommand> --help for help')
+
+    # import the query classes
+    from .query import permitted
+    permitted.PermittedQuery(subparsers)
+    from .query import denied
+    denied.DeniedQuery(subparsers)
+    from .query import apps
+    apps.AppsQuery(subparsers)
 
     args, cfg = _setup(parser)
     if not args.verbose:
         logging.getLogger('').setLevel(logging.CRITICAL)
 
-    terminal = Terminal()
-    source_file = cfg[args.source]['output']
-    rules = tests.Rules(source_file)
-    try:
-        rules.assertPermits(args.src_ip, args.dst_ip, args.app)
-    except AssertionError:
-        if not args.quiet:
-            print terminal.black_on_red("Flow not permitted")
-        sys.exit(1)
-    else:
-        if not args.quiet:
-            print terminal.black_on_green("Flow permitted")
+    if not args._func:
+        parser.error("No subcomand given")
+
+    args._func(args, cfg)

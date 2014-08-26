@@ -277,7 +277,7 @@ Aside from writing unit tests, you can query against a rule source with
 For example:
 
 ```
-fwunit-query enterprise 10.10.1.1 192.168.1.1 ssh
+fwunit-query enterprise permitted 10.10.1.1 192.168.1.1 ssh
 Flow permitted
 ```
 
