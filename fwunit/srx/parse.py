@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import xml.etree.ElementTree as ET
+from . import show
 from fwunit.ip import IP, IPSet
 from logging import getLogger
 
@@ -101,7 +102,8 @@ class Route(object):
                 route.is_local = not bool(
                     entry.findall(
                         './/{http://xml.juniper.net/junos/12.1X44/junos-routing}to'))
-        # only return a Route if we found something useful (omitting nh-local-interface)
+        # only return a Route if we found something useful (omitting
+        # nh-local-interface)
         if route.interface:
             return route
 
@@ -146,34 +148,48 @@ class Zone(object):
 
 class Firewall(object):
 
-    def __init__(self, security_policies_xml,
-                 route_xml, configuration_security_zones_xml):
-
-        #: list of Policy instances
-        self.policies = self._parse_policies(security_policies_xml)
-
-        #: list of Route instances from 'inet.0'
-        self.routes = self._parse_routes(route_xml)
+    def parse(self, cfg):
 
         #: list of security zones
-        self.zones = self._parse_zones(configuration_security_zones_xml)
+        self.zones = self._parse_zones(cfg)
 
-    def _parse_policies(self, security_policies_xml):
-        log.info("parsing policies")
-        sspe = ET.parse(security_policies_xml).getroot()
+        #: list of Policy instances
+        self.policies = self._parse_policies(cfg)
+
+        #: list of Route instances from 'inet.0'
+        self.routes = self._parse_routes(cfg)
+
+    def _parse_policies(self, cfg):
         policies = []
-        for elt in sspe.findall('.//security-context'):
-            from_zone = elt.find('./context-information/source-zone-name').text
-            to_zone = elt.find(
-                './context-information/destination-zone-name').text
-            for pol_elt in elt.findall('./policies/policy-information'):
-                policy = Policy._from_xml(from_zone, to_zone, pol_elt)
-                policies.append(policy)
+        zone_names = [z.name for z in self.zones]
+        for from_zone in zone_names:
+            for to_zone in zone_names:
+                log.info(
+                    "downloading policies from-zone %s to-zone %s", from_zone, to_zone)
+                policies_xml = show.show(
+                    cfg, 'security policies from-zone %s to-zone %s' %
+                    (from_zone, to_zone))
+
+                log.info(
+                    "parsing policies from-zone %s to-zone %s", from_zone, to_zone)
+                sspe = ET.fromstring(policies_xml)
+
+                for elt in sspe.findall('.//security-context'):
+                    from_zone = elt.find(
+                        './context-information/source-zone-name').text
+                    to_zone = elt.find(
+                        './context-information/destination-zone-name').text
+                    for pol_elt in elt.findall('./policies/policy-information'):
+                        policy = Policy._from_xml(from_zone, to_zone, pol_elt)
+                        policies.append(policy)
         return policies
 
-    def _parse_routes(self, route_xml):
+    def _parse_routes(self, cfg):
+        log.info("downloading routes")
+        route_xml = show.show(cfg, 'route')
+
         log.info("parsing routes")
-        sre = ET.parse(route_xml).getroot()
+        sre = ET.fromstring(route_xml)
         routes = []
         # thanks for the namespaces, Juniper.
         for table in sre.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}route-table'):
@@ -185,9 +201,12 @@ class Firewall(object):
                 return routes
         return []
 
-    def _parse_zones(self, configuration_security_zones_xml):
+    def _parse_zones(self, cfg):
+        log.info("downloading zones")
+        zones_xml = show.show(cfg, 'configuration security zones')
+
         log.info("parsing zones")
-        scsze = ET.parse(configuration_security_zones_xml).getroot()
+        scsze = ET.fromstring(zones_xml)
         zones = []
         for sz in scsze.findall('.//security-zone'):
             zones.append(Zone._from_xml(sz))

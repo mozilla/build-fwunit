@@ -102,30 +102,28 @@ application map, as this might result in overlapping rules.
 Juniper SRX
 -----------
 
-First, download the relevant XML from your firewall:
+This source type uses SSH with a username and password to connect to a Juniper SRX firewall.
+It only runs 'show' commands, so read-only access is adequate.
 
-    fw1> show route | display xml | save route.xml
-    fw1> show security policies | display xml | save security_policies.xml
-    fw1> show configuration security zones | display xml | save configuration_security_zones.xml
-
-and then copy those `.xml` files somewhere local using scp.  Configure them in your source:
+The configuration looks like this:
 
 ```
 myfirewall:
     type: srx
     output: myfirewall.pkl
-    security-policies-xml: fw1_releng_scl3_show_security_policies.xml
-    route-xml: fw1_releng_scl3_show_route.xml
-    configuration-security-zones-xml: fw1_releng_scl3_show_configuration_security_zones.xml
+    firewall: fw1.releng.scl3.mozilla.com
+    ssh_username: fwunit
+    ssh_password: sekr!t
 ```
 
-and run `fwunit`.
+The `firewall` config gives a hostname (or IP) of the firewall that accepts SSH connections.
+`ssh_username` and `ssh_password` are the credentials for the account.
 
-This process may take a while, depending on the complexity of your policies.
+The process of downloading and processing policies can be very slow, depending on the complexity of your policies.
 
 ### Assumptions ###
 
-This processing makes the following assumpotions about your network
+This processing makes the following assumptions about your network
 
   * Rule IPs are limited by the to- and from-zones of the original policy, so
     given a "from any" policy with from-zone ABC, the resulting rule's `src`

@@ -9,8 +9,6 @@ from fwunit import common
 
 def run(cfg, fwunit_cfg):
     app_map = common.ApplicationMap(cfg)
-    firewall = Firewall(
-        security_policies_xml=open(cfg['security-policies-xml']),
-        route_xml=open(cfg['route-xml']),
-        configuration_security_zones_xml=open(cfg['configuration-security-zones-xml']))
+    firewall = Firewall()
+    firewall.parse(cfg)
     return policies_to_rules(app_map, firewall)

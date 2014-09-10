@@ -16,9 +16,11 @@ setup(
         "nose",
         "blessings",
         "PyYAML",
+        "mock",
     ],
     extras_require={
         'srx': [
+            'paramiko',
         ],
         'aws': [
             'boto',

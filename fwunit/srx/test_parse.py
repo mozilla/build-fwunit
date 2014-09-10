@@ -1,0 +1,229 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+from fwunit.ip import IP, IPSet
+from . import parse
+from nose.tools import eq_
+import mock
+
+show_patch = mock.patch('fwunit.srx.show.show')
+
+route_xml = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <route-information xmlns="http://xml.juniper.net/junos/12.1X44/junos-routing">
+        <!-- keepalive -->
+        <route-table>
+            <table-name>inet.0</table-name>
+            <destination-count>273</destination-count>
+            <total-route-count>410</total-route-count>
+            <active-route-count>273</active-route-count>
+            <holddown-route-count>0</holddown-route-count>
+            <hidden-route-count>0</hidden-route-count>
+            <rt junos:style="brief">
+                <rt-destination>0.0.0.0/0</rt-destination>
+                <rt-entry>
+                    <active-tag>*</active-tag>
+                    <current-active/>
+                    <last-active/>
+                    <protocol-name>OSPF</protocol-name>
+                    <preference>150</preference>
+                    <age junos:seconds="13685128">222w4d 09:25:28</age>
+                    <metric>0</metric>
+                    <rt-tag>0</rt-tag>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>1.2.3.4</to>
+                        <via>reth0</via>
+                    </nh>
+                </rt-entry>
+                <rt-entry>
+                    <active-tag> </active-tag>
+                    <protocol-name>Static</protocol-name>
+                    <preference>200</preference>
+                    <age junos:seconds="13685185">22w4d 09:26:25</age>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>1.2.3.5</to>
+                        <via>reth0</via>
+                    </nh>
+                </rt-entry>
+            </rt>
+        </route-table>
+    </route-information>
+    <cli>
+        <banner>{primary:node1}</banner>
+    </cli>
+</rpc-reply>
+"""
+
+zones_xml = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <configuration junos:commit-seconds="1409696876" junos:commit-localtime="2014-09-02 22:27:56 UTC" junos:commit-user="dcurado">
+            <security>
+                <zones>
+                    <security-zone>
+                        <name>untrust</name>
+                        <address-book>
+                            <address>
+                                <name>host1</name>
+                                <ip-prefix>9.0.9.1/32</ip-prefix>
+                            </address>
+                            <address>
+                                <name>host2</name>
+                                <ip-prefix>9.0.9.2/32</ip-prefix>
+                            </address>
+                            <address-set>
+                                <name>hosts</name>
+                                <address>
+                                    <name>host1</name>
+                                </address>
+                                <address>
+                                    <name>host2</name>
+                                </address>
+                            </address-set>
+                        </address-book>
+                        <interfaces>
+                            <name>reth0</name>
+                            <host-inbound-traffic>
+                                <system-services>
+                                    <name>ping</name>
+                                </system-services>
+                                <system-services>
+                                    <name>traceroute</name>
+                                </system-services>
+                                <system-services>
+                                    <name>bootp</name>
+                                </system-services>
+                            </host-inbound-traffic>
+                        </interfaces>
+                    </security-zone>
+                    <security-zone>
+                        <name>trust</name>
+                        <address-book>
+                        </address-book>
+                        <interfaces>
+                            <name>reth0</name>
+                            <host-inbound-traffic>
+                                <system-services>
+                                    <name>ping</name>
+                                </system-services>
+                            </host-inbound-traffic>
+                        </interfaces>
+                    </security-zone>
+                </zones>
+            </security>
+    </configuration>
+    <cli>
+        <banner>{primary:node1}</banner>
+    </cli>
+</rpc-reply>
+"""
+
+policy_xml = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <multi-routing-engine-results>
+        <multi-routing-engine-item>
+            <re-name>node1</re-name>
+            <security-policies junos:style="brief">
+                <security-context>
+                    <context-information>
+                        <source-zone-name>%(from_zone)s</source-zone-name>
+                        <destination-zone-name>%(to_zone)s</destination-zone-name>
+                    </context-information>
+                    <policies>
+                        <policy-information>
+                            <policy-name>permit</policy-name>
+                            <policy-state>enabled</policy-state>
+                            <policy-identifier>2706</policy-identifier>
+                            <scope-policy-identifier>0</scope-policy-identifier>
+                            <policy-sequence-number>1</policy-sequence-number>
+                            <source-addresses junos:style="brief">
+                                <source-address>
+                                    <address-name>any</address-name>
+                                </source-address>
+                            </source-addresses>
+                            <destination-addresses junos:style="brief">
+                                <destination-address>
+                                    <address-name>any</address-name>
+                                </destination-address>
+                            </destination-addresses>
+                            <applications junos:style="brief">
+                                <application>
+                                    <application-name>%(from_zone)s-%(to_zone)s</application-name>
+                                </application>
+                            </applications>
+                            <source-identities junos:style="brief"></source-identities>
+                            <policy-action>
+                                <action-type>permit</action-type>
+                                <policy-tcp-options>
+                                    <policy-tcp-options-syn-check>No</policy-tcp-options-syn-check>
+                                    <policy-tcp-options-sequence-check>No</policy-tcp-options-sequence-check>
+                                </policy-tcp-options>
+                            </policy-action>
+                            <policy-application-services></policy-application-services>
+                        </policy-information>
+                    </policies>
+                </security-context>
+            </security-policies>
+        </multi-routing-engine-item>
+        
+    </multi-routing-engine-results>
+    <cli>
+        <banner>{primary:node1}</banner>
+    </cli>
+</rpc-reply>
+"""
+
+
+def fake_show(cfg, request):
+    assert cfg['firewall'] == 'fw'
+    assert cfg['ssh_username'] == 'uu'
+    assert cfg['ssh_password'] == 'pp'
+    if request == 'route':
+        return route_xml
+    elif request == 'configuration security zones':
+        return zones_xml
+    elif request.startswith('security policies'):
+        request = request.split()
+        from_zone, to_zone = request[3], request[5]
+        return policy_xml % dict(from_zone=from_zone, to_zone=to_zone)
+    else:
+        raise AssertionError("bad request")
+
+fake_cfg = dict(firewall = 'fw', ssh_username = 'uu', ssh_password = 'pp')
+
+
+def setup_module():
+    m = show_patch.start()
+    m.side_effect = fake_show
+
+
+def teardown_module():
+    show_patch.stop()
+
+
+def test_parse_routes():
+    fw = parse.Firewall()
+    eq_([str(r) for r in fw._parse_routes(fake_cfg)], ['0.0.0.0/0 via reth0'])
+
+
+def test_parse_zones():
+    fw = parse.Firewall()
+    zones = fw._parse_zones(fake_cfg)
+    eq_(sorted([str(r) for r in zones]),
+        sorted(["untrust on ['reth0']", "trust on ['reth0']"]))
+    eq_(sorted(zones)[0].addresses['host1'], IPSet([IP('9.0.9.1')]))
+
+
+def test_parse_policies():
+    fw = parse.Firewall()
+    fw.zones = fw._parse_zones(fake_cfg)
+    policies = fw._parse_policies(fake_cfg)
+    eq_(sorted([str(p) for p in policies]),
+        sorted([
+            "permit trust:['any'] -> trust:['any'] : ['trust-trust']",
+            "permit trust:['any'] -> untrust:['any'] : ['trust-untrust']",
+            "permit untrust:['any'] -> trust:['any'] : ['untrust-trust']",
+            "permit untrust:['any'] -> untrust:['any'] : ['untrust-untrust']",
+        ]))
