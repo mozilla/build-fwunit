@@ -5,9 +5,11 @@
 from .parse import Firewall
 from .process import policies_to_rules
 from fwunit import common
+import logging
 
 
 def run(cfg, fwunit_cfg):
+    logging.getLogger("paramiko").setLevel(logging.WARNING)
     app_map = common.ApplicationMap(cfg)
     firewall = Firewall()
     firewall.parse(cfg)

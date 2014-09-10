@@ -4,10 +4,18 @@
 
 import paramiko
 
-def show(cfg, request):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(cfg['firewall'], username=cfg['ssh_username'], password=cfg['ssh_password'])
-    stdin, stdout, stderr = ssh.exec_command('show %s | display xml | no-more\n' % request,
-                                             timeout=240.0)
-    return stdout.read()
+class Connection(object):
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.ssh = paramiko.SSHClient()
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh.connect(self.cfg['firewall'],
+                         username=self.cfg['ssh_username'],
+                         password=self.cfg['ssh_password'])
+
+    def show(self, request):
+        stdin, stdout, stderr = self.ssh.exec_command(
+                'show %s | display xml | no-more\n' % request,
+                timeout=240.0)
+        return stdout.read()

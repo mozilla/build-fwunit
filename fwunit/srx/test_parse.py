@@ -4,10 +4,9 @@
 
 from fwunit.ip import IP, IPSet
 from . import parse
+from . import show
 from nose.tools import eq_
 import mock
-
-show_patch = mock.patch('fwunit.srx.show.show')
 
 route_xml = """\
 <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
@@ -176,10 +175,7 @@ policy_xml = """\
 """
 
 
-def fake_show(cfg, request):
-    assert cfg['firewall'] == 'fw'
-    assert cfg['ssh_username'] == 'uu'
-    assert cfg['ssh_password'] == 'pp'
+def fake_show(request):
     if request == 'route':
         return route_xml
     elif request == 'configuration security zones':
@@ -192,25 +188,27 @@ def fake_show(cfg, request):
         raise AssertionError("bad request")
 
 fake_cfg = dict(firewall = 'fw', ssh_username = 'uu', ssh_password = 'pp')
+conn_patch = mock.patch('fwunit.srx.show.Connection', spec=show.Connection)
 
 
 def setup_module():
-    m = show_patch.start()
-    m.side_effect = fake_show
+    m = conn_patch.start()
+    m().show.side_effect = fake_show
 
 
 def teardown_module():
-    show_patch.stop()
+    conn_patch.stop()
 
 
 def test_parse_routes():
     fw = parse.Firewall()
-    eq_([str(r) for r in fw._parse_routes(fake_cfg)], ['0.0.0.0/0 via reth0'])
+    routes = fw._parse_routes(show.Connection(fake_cfg))
+    eq_([str(r) for r in routes], ['0.0.0.0/0 via reth0'])
 
 
 def test_parse_zones():
     fw = parse.Firewall()
-    zones = fw._parse_zones(fake_cfg)
+    zones = fw._parse_zones(show.Connection(fake_cfg))
     eq_(sorted([str(r) for r in zones]),
         sorted(["untrust on ['reth0']", "trust on ['reth0']"]))
     eq_(sorted(zones)[0].addresses['host1'], IPSet([IP('9.0.9.1')]))
@@ -218,8 +216,8 @@ def test_parse_zones():
 
 def test_parse_policies():
     fw = parse.Firewall()
-    fw.zones = fw._parse_zones(fake_cfg)
-    policies = fw._parse_policies(fake_cfg)
+    fw.zones = fw._parse_zones(show.Connection(fake_cfg))
+    policies = fw._parse_policies(show.Connection(fake_cfg))
     eq_(sorted([str(p) for p in policies]),
         sorted([
             "permit trust:['any'] -> trust:['any'] : ['trust-trust']",

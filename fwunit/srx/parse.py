@@ -149,26 +149,26 @@ class Zone(object):
 class Firewall(object):
 
     def parse(self, cfg):
+        ssh_connection = show.Connection(cfg)
 
         #: list of security zones
-        self.zones = self._parse_zones(cfg)
+        self.zones = self._parse_zones(ssh_connection)
 
         #: list of Policy instances
-        self.policies = self._parse_policies(cfg)
+        self.policies = self._parse_policies(ssh_connection)
 
         #: list of Route instances from 'inet.0'
-        self.routes = self._parse_routes(cfg)
+        self.routes = self._parse_routes(ssh_connection)
 
-    def _parse_policies(self, cfg):
+    def _parse_policies(self, ssh_connection):
         policies = []
         zone_names = [z.name for z in self.zones]
         for from_zone in zone_names:
             for to_zone in zone_names:
                 log.info(
                     "downloading policies from-zone %s to-zone %s", from_zone, to_zone)
-                policies_xml = show.show(
-                    cfg, 'security policies from-zone %s to-zone %s' %
-                    (from_zone, to_zone))
+                policies_xml = ssh_connection.show(
+                    'security policies from-zone %s to-zone %s' % (from_zone, to_zone))
 
                 log.info(
                     "parsing policies from-zone %s to-zone %s", from_zone, to_zone)
@@ -184,9 +184,9 @@ class Firewall(object):
                         policies.append(policy)
         return policies
 
-    def _parse_routes(self, cfg):
+    def _parse_routes(self, ssh_connection):
         log.info("downloading routes")
-        route_xml = show.show(cfg, 'route')
+        route_xml = ssh_connection.show('route')
 
         log.info("parsing routes")
         sre = ET.fromstring(route_xml)
@@ -201,9 +201,9 @@ class Firewall(object):
                 return routes
         return []
 
-    def _parse_zones(self, cfg):
+    def _parse_zones(self, ssh_connection):
         log.info("downloading zones")
-        zones_xml = show.show(cfg, 'configuration security zones')
+        zones_xml = ssh_connection.show('configuration security zones')
 
         log.info("parsing zones")
         scsze = ET.fromstring(zones_xml)

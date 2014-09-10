@@ -13,7 +13,7 @@ def test_show_ok(SSHClient):
     SSHClient().exec_command.return_value = StringIO(), StringIO(xml), StringIO()
 
     cfg = dict(firewall = 'fw', ssh_username = 'uu', ssh_password = 'pp')
-    eq_(show.show(cfg, 'route'), xml)
+    eq_(show.Connection(cfg).show('route'), xml)
 
     SSHClient().set_missing_host_key_policy.assert_called_with(mock.ANY)
     SSHClient().connect.assert_called_with('fw', username='uu', password='pp')
