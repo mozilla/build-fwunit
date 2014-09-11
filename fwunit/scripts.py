@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import cPickle as pickle
 import argparse
 import logging
 import sys
@@ -11,7 +10,9 @@ import yaml
 import os
 import os.path
 from fwunit import log
+from fwunit import types
 import pkg_resources
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,8 @@ def main():
         logger.warning("running %s", source)
         rules = ep(src_cfg, cfg)
         logger.warning("writing resulting rules to %s", output)
-        pickle.dump(rules, open(output, "w"))
+        json.dump(dict(rules=types.to_jsonable(rules)),
+                  open(output, "w"))
 
 
 def query():

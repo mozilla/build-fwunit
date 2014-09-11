@@ -3,7 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from . import process
-import cPickle as pickle
+from fwunit import types
+import json
 
 
 def run(cfg, fwunit_cfg):
@@ -12,8 +13,8 @@ def run(cfg, fwunit_cfg):
         if not isinstance(ip_space, list):
             ip_space = [ip_space]
         # look up and load the input's rules
-        pkl = fwunit_cfg[name]['output']
-        rules = pickle.load(open(pkl))
+        input = fwunit_cfg[name]['output']
+        rules = types.from_jsonable(json.load(open(input))['rules'])
         input_rules[name] = dict(rules=rules, ip_space=ip_space)
 
     return process.combine(input_rules)

@@ -53,7 +53,6 @@ class IPSet(IPy.IPSet):
 
     # see https://github.com/haypo/python-ipy/pull/25
     def __contains__(self, ip):
-        assert 0
         valid_masks = self.prefixtable.keys()
         if isinstance(ip, IP):
             #Don't dig through more-specific ranges
