@@ -2,10 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import cPickle as pickle
 import logging
+import json
 from fwunit.ip import IP, IPSet, IPPairs
 from nose.tools import ok_
+from fwunit import types
 from blessings import Terminal
 
 log = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def _ipset(ip):
 
 class Rules(object):
     def __init__(self, filename):
-        self.rules = pickle.load(open(filename))
+        self.rules = types.from_jsonable(json.load(open(filename))['rules'])
 
     def assertDenies(self, src, dst, app):
         """Assert that no flow matching [src -> dst : app] is allowed"""
