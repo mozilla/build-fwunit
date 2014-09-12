@@ -24,7 +24,6 @@ class Rules(object):
         self.rules = types.from_jsonable(json.load(open(filename))['rules'])
 
     def assertDenies(self, src, dst, app):
-        """Assert that no flow matching [src -> dst : app] is allowed"""
         src = _ipset(src)
         dst = _ipset(dst)
         log.info("assertDenies(%r, %r, %r)" % (src, dst, app))
@@ -51,7 +50,6 @@ class Rules(object):
         ok_(failures == 0, "%d matching rules" % failures)
 
     def assertPermits(self, src, dst, app):
-        """Assert that all flows matching [src -> dst : app] are allowed"""
         src = _ipset(src)
         dst = _ipset(dst)
         log.info("assertPermits(%r, %r, %r)" % (src, dst, app))
@@ -72,8 +70,6 @@ class Rules(object):
                                  .format(t=terminal, app=app, flows=flows))
 
     def sourcesFor(self, dst, app, ignore_sources=None):
-        """Return an IPSet with all sources for traffic to any IP in dst on
-        application app, ignoring flows from ignore_sources"""
         # TODO: useful to have rules by app here, too!
         dst = _ipset(dst)
         log.info("sourcesFor(%r, %r, ignore_sources=%r)" % (dst, app, ignore_sources))
@@ -93,8 +89,6 @@ class Rules(object):
         return rv
 
     def allApps(self, src, dst, debug=False):
-        """Return a set of applications with access form src to dst.  Pass
-        debug=True to log the full list of matching flows"""
         src = _ipset(src)
         dst = _ipset(dst)
         log.info("appsTo(%r, %r)" % (src, dst))
@@ -115,9 +109,6 @@ class Rules(object):
         return rv
 
     def appsOn(self, dst, ignore_sources=None, debug=False):
-        """Return a set of applications with access to dst, ignoring flows from ignore_sources)
-        application app, ignoring flows from ignore.  Pass debug=True to log the full list of
-        matching flows."""
         log.info("appsOn(%r, ignore_sources=%r)" % (dst, ignore_sources))
         rv = set()
         for rule in self.rules:
