@@ -24,7 +24,10 @@ setup(
         ],
         'aws': [
             'boto',
-        ]
+        ],
+        'docs': [
+            'sphinx',
+        ],
     },
     entry_points={
         "console_scripts": [
