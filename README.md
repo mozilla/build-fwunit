@@ -12,3 +12,8 @@ Any developer worth their salt tests their software.  The benefits are many:
  * Enable code refactoring without changing expected behavior
 
 With `fwunit`, you can do the same for security policies on your network.
+
+Documentation
+=============
+
+See http://fwunit.readthedocs.org/
