@@ -4,13 +4,21 @@
 
 from setuptools import setup, find_packages
 
+import versioneer
+versioneer.VCS = 'git'
+versioneer.versionfile_source = 'fwunit/_version.py'
+versioneer.versionfile_build = 'fwunit/_version.py'
+versioneer.tag_prefix = ''
+versioneer.parentdir_prefix = 'fwunit-'
+
 setup(
     name='fwunit',
-    version='0.1.0',
     description='Unit tests for firewall rules',
     author='Dustin J. Mitchell',
     author_email='dustin@mozilla.com',
     packages=find_packages(),
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     install_requires=[
         "IPy",
         "nose",
