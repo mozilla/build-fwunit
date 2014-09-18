@@ -57,6 +57,55 @@ route_xml = """\
 </rpc-reply>
 """
 
+route_xml_11_4R6 = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/11.4R6/junos">
+    <route-information xmlns="http://xml.juniper.net/junos/11.4R6/junos-routing">
+        <!-- keepalive -->
+        <route-table>
+            <table-name>inet.0</table-name>
+            <destination-count>271</destination-count>
+            <total-route-count>418</total-route-count>
+            <active-route-count>271</active-route-count>
+            <holddown-route-count>0</holddown-route-count>
+            <hidden-route-count>0</hidden-route-count>
+            <rt junos:style="brief">
+                <rt-destination>0.0.0.0/0</rt-destination>
+                <rt-entry>
+                    <active-tag>*</active-tag>
+                    <current-active/>
+                    <last-active/>
+                    <protocol-name>OSPF</protocol-name>
+                    <preference>150</preference>
+                    <age junos:seconds="17598334">8w6d 20:45:34</age>
+                    <metric>0</metric>
+                    <rt-tag>0</rt-tag>
+                    <nh>
+                        <to>11.111.111.11</to>
+                        <via>reth0.10</via>
+                    </nh>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>222.22.22.222</to>
+                        <via>reth0.11</via>
+                    </nh>
+                </rt-entry>
+                <rt-entry>
+                    <active-tag> </active-tag>
+                    <protocol-name>Static</protocol-name>
+                    <preference>200</preference>
+                    <age junos:seconds="26417257">43w4d 18:07:37</age>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>11.111.111.11</to>
+                        <via>reth0.10</via>
+                    </nh>
+                </rt-entry>
+            </rt>
+        </route-table>
+    </route-information>
+</rpc-reply>
+"""
+
 zones_xml = """\
 <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
     <configuration junos:commit-seconds="1409696876" junos:commit-localtime="2014-09-02 22:27:56 UTC" junos:commit-user="dcurado">
@@ -210,7 +259,7 @@ conn_patch = mock.patch('fwunit.srx.show.Connection', spec=show.Connection)
 
 
 def parse_xml(xml, elt_path=None):
-    elt = ET.fromstring(xml)
+    elt = parse.strip_namespaces(ET.fromstring(xml))
     if elt_path:
         elt = elt.find(elt_path)
     return elt
@@ -234,6 +283,13 @@ def test_parse_zones_empty():
     z = parse.Zone._from_xml(elt)
     eq_(z.interfaces, [])
     eq_(z.addresses.keys(), ['any'])
+
+def test_parse_route_11_4R6():
+    elt = parse_xml(route_xml_11_4R6, './/rt')
+    r = parse.Route._from_xml(elt)
+    eq_(r.destination, IP('0.0.0.0/0'))
+    eq_(r.interface, 'reth0.10')
+    eq_(r.is_local, False)
 
 #
 # Integration-style tests
