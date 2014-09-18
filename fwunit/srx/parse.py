@@ -165,10 +165,13 @@ class Firewall(object):
     def _parse_policies(self, ssh_connection):
         policies = []
         zone_names = [z.name for z in self.zones]
+        num_downloads = len(zone_names) ** 2
+        count = 0
         for from_zone in zone_names:
             for to_zone in zone_names:
                 log.info(
-                    "downloading policies from-zone %s to-zone %s", from_zone, to_zone)
+                    "downloading policies from-zone %s to-zone %s (%3.0f%%)",
+                    from_zone, to_zone, (100 * count / num_downloads))
                 policies_xml = ssh_connection.show(
                     'security policies from-zone %s to-zone %s' % (from_zone, to_zone))
 
