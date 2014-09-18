@@ -28,6 +28,7 @@ setup(
     ],
     extras_require={
         'srx': [
+            "lxml",
             'paramiko',
         ],
         'aws': [
