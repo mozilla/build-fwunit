@@ -209,9 +209,7 @@ class Firewall(object):
         routes = []
         for table in sre.findall('.//route-table'):
             if table.findtext('table-name') == 'inet.0':
-                print table.nsmap
                 for rt_elt in table.findall('rt'):
-                    print rt_elt.nsmap
                     route = Route._from_xml(rt_elt)
                     if route:
                         routes.append(route)
