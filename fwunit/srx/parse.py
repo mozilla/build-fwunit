@@ -54,11 +54,11 @@ class Policy(object):
         pol.enabled = pie.find('./policy-state').text == 'enabled'
         pol.sequence = int(pie.find('./policy-sequence-number').text)
         pol.source_addresses = [
-            pol._parse_address(e) for e in pie.findall('./source-addresses/*') or []]
+            pol._parse_address(e) for e in pie.findall('./source-addresses/*')]
         pol.destination_addresses = [
-            pol._parse_address(e) for e in pie.findall('./destination-addresses/*') or []]
+            pol._parse_address(e) for e in pie.findall('./destination-addresses/*')]
         pol.applications = [
-            pol._parse_application(e) for e in pie.findall('./applications/application') or []]
+            pol._parse_application(e) for e in pie.findall('./applications/application')]
         pol.action = pie.find('./policy-action/action-type').text
         return pol
 
@@ -93,7 +93,7 @@ class Route(object):
         route = cls()
         route.destination = IP(rt_elt.find(
             '{http://xml.juniper.net/junos/12.1X44/junos-routing}rt-destination').text)
-        for entry in rt_elt.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt-entry') or []:
+        for entry in rt_elt.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt-entry'):
             if entry.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}current-active'):
                 vias = entry.findall(
                     './/{http://xml.juniper.net/junos/12.1X44/junos-routing}via')
@@ -129,20 +129,22 @@ class Zone(object):
         zone.name = sze.find('name').text
 
         # interfaces
-        for itfc in sze.findall('.//interfaces/name') or []:
+        for itfc in sze.findall('.//interfaces/name'):
             zone.interfaces.append(itfc.text)
 
         # address book
-        for addr in sze.find('address-book') or []:
-            name = addr.findtext('name')
-            if addr.tag == 'address':
-                ip = IPSet([IP(addr.findtext('ip-prefix'))])
-            else:  # note: assumes address-sets follow addresses
-                ip = IPSet()
-                for setaddr in addr.findall('address') or []:
-                    setname = setaddr.findtext('name')
-                    ip += zone.addresses[setname]
-            zone.addresses[name] = ip
+        addrbook = sze.find('address-book') 
+        if addrbook is not None:
+            for addr in addrbook:
+                name = addr.findtext('name')
+                if addr.tag == 'address':
+                    ip = IPSet([IP(addr.findtext('ip-prefix'))])
+                else:  # note: assumes address-sets follow addresses
+                    ip = IPSet()
+                    for setaddr in addr.findall('address'):
+                        setname = setaddr.findtext('name')
+                        ip += zone.addresses[setname]
+                zone.addresses[name] = ip
         return zone
 
 
@@ -174,12 +176,12 @@ class Firewall(object):
                     "parsing policies from-zone %s to-zone %s", from_zone, to_zone)
                 sspe = ET.fromstring(policies_xml)
 
-                for elt in sspe.findall('.//security-context') or []:
+                for elt in sspe.findall('.//security-context'):
                     from_zone = elt.find(
                         './context-information/source-zone-name').text
                     to_zone = elt.find(
                         './context-information/destination-zone-name').text
-                    for pol_elt in elt.findall('./policies/policy-information') or []:
+                    for pol_elt in elt.findall('./policies/policy-information'):
                         policy = Policy._from_xml(from_zone, to_zone, pol_elt)
                         policies.append(policy)
         return policies
@@ -192,9 +194,9 @@ class Firewall(object):
         sre = ET.fromstring(route_xml)
         routes = []
         # thanks for the namespaces, Juniper.
-        for table in sre.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}route-table') or []:
+        for table in sre.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}route-table'):
             if table.findtext('{http://xml.juniper.net/junos/12.1X44/junos-routing}table-name') == 'inet.0':
-                for rt_elt in table.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt') or []:
+                for rt_elt in table.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt'):
                     route = Route._from_xml(rt_elt)
                     if route:
                         routes.append(route)
@@ -208,6 +210,6 @@ class Firewall(object):
         log.info("parsing zones")
         scsze = ET.fromstring(zones_xml)
         zones = []
-        for sz in scsze.findall('.//security-zone') or []:
+        for sz in scsze.findall('.//security-zone'):
             zones.append(Zone._from_xml(sz))
         return zones

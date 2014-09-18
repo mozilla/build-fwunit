@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import xml.etree.ElementTree as ET
 from fwunit.ip import IP, IPSet
 from . import parse
 from . import show
@@ -119,6 +120,23 @@ zones_xml = """\
 </rpc-reply>
 """
 
+zones_empty_xml = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <configuration junos:commit-seconds="1409696876" junos:commit-localtime="2014-09-02 22:27:56 UTC" junos:commit-user="dcurado">
+            <security>
+                <zones>
+                    <security-zone>
+                        <name>empty</name>
+                    </security-zone>
+                </zones>
+            </security>
+    </configuration>
+    <cli>
+        <banner>{primary:node1}</banner>
+    </cli>
+</rpc-reply>
+"""
+
 policy_xml = """\
 <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
     <multi-routing-engine-results>
@@ -187,8 +205,15 @@ def fake_show(request):
     else:
         raise AssertionError("bad request")
 
-fake_cfg = dict(firewall = 'fw', ssh_username = 'uu', ssh_password = 'pp')
+fake_cfg = dict(firewall='fw', ssh_username='uu', ssh_password='pp')
 conn_patch = mock.patch('fwunit.srx.show.Connection', spec=show.Connection)
+
+
+def parse_xml(xml, elt_path=None):
+    elt = ET.fromstring(xml)
+    if elt_path:
+        elt = elt.find(elt_path)
+    return elt
 
 
 def setup_module():
@@ -198,6 +223,22 @@ def setup_module():
 
 def teardown_module():
     conn_patch.stop()
+
+#
+# Unit tests
+#
+
+
+def test_parse_zones_empty():
+    elt = parse_xml(zones_empty_xml, './/security-zone')
+    z = parse.Zone._from_xml(elt)
+    eq_(z.interfaces, [])
+    eq_(z.addresses.keys(), ['any'])
+
+#
+# Integration-style tests
+#
+# These use Firewall._parse_*, passing in raw XML
 
 
 def test_parse_routes():
