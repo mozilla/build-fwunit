@@ -65,7 +65,12 @@ def process_zone_nets(zones, interface_ips):
     for zone in zones:
         net = IPSet()
         for itfc in zone.interfaces:
-            net += interface_ips[itfc]
+            try:
+                net += interface_ips[itfc]
+            except KeyError:
+                # if the interface doesn't have any attached subnet, continue on
+                # (this can happen for backup interfaces, for example)
+                pass
         zone_nets[zone.name] = net
     return zone_nets
 
