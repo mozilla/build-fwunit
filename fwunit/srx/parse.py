@@ -11,7 +11,9 @@ log = getLogger(__name__)
 
 
 def strip_namespaces(root):
-    """Strip namespaces from all elements in the XML document"""
+    """Strip namespaces from all elements in the XML document.  Juniper adds
+    version-specific namespaces to route documents, so this makes parsing them
+    a lot easier"""
     # from http://stackoverflow.com/questions/18159221/remove-namespace-and-prefix-from-xml-in-python-using-lxml
     for elem in root.getiterator():
         if not hasattr(elem.tag, 'find'):
@@ -205,7 +207,6 @@ class Firewall(object):
         log.info("parsing routes")
         sre = strip_namespaces(ET.fromstring(route_xml))
         routes = []
-        # thanks for the namespaces, Juniper.
         for table in sre.findall('.//route-table'):
             if table.findtext('table-name') == 'inet.0':
                 print table.nsmap
