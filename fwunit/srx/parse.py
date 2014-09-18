@@ -2,13 +2,24 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import xml.etree.ElementTree as ET
+import lxml.etree as ET
 from . import show
 from fwunit.ip import IP, IPSet
 from logging import getLogger
 
 log = getLogger(__name__)
 
+
+def strip_namespaces(root):
+    """Strip namespaces from all elements in the XML document"""
+    # from http://stackoverflow.com/questions/18159221/remove-namespace-and-prefix-from-xml-in-python-using-lxml
+    for elem in root.getiterator():
+        if not hasattr(elem.tag, 'find'):
+            continue
+        i = elem.tag.find('}')
+        if i >= 0:
+            elem.tag = elem.tag[i+1:]
+    return root
 
 class Policy(object):
 
@@ -91,17 +102,14 @@ class Route(object):
     @classmethod
     def _from_xml(cls, rt_elt):
         route = cls()
-        route.destination = IP(rt_elt.find(
-            '{http://xml.juniper.net/junos/12.1X44/junos-routing}rt-destination').text)
-        for entry in rt_elt.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt-entry'):
-            if entry.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}current-active'):
-                vias = entry.findall(
-                    './/{http://xml.juniper.net/junos/12.1X44/junos-routing}via')
+        route.destination = IP(rt_elt.find('rt-destination').text)
+        for entry in rt_elt.findall('rt-entry'):
+            if entry.findall('.//current-active'):
+                vias = entry.findall('.//via')
                 if vias:
                     route.interface = vias[0].text
                 route.is_local = not bool(
-                    entry.findall(
-                        './/{http://xml.juniper.net/junos/12.1X44/junos-routing}to'))
+                    entry.findall('.//to'))
         # only return a Route if we found something useful (omitting
         # nh-local-interface)
         if route.interface:
@@ -195,12 +203,14 @@ class Firewall(object):
         route_xml = ssh_connection.show('route')
 
         log.info("parsing routes")
-        sre = ET.fromstring(route_xml)
+        sre = strip_namespaces(ET.fromstring(route_xml))
         routes = []
         # thanks for the namespaces, Juniper.
-        for table in sre.findall('.//{http://xml.juniper.net/junos/12.1X44/junos-routing}route-table'):
-            if table.findtext('{http://xml.juniper.net/junos/12.1X44/junos-routing}table-name') == 'inet.0':
-                for rt_elt in table.findall('{http://xml.juniper.net/junos/12.1X44/junos-routing}rt'):
+        for table in sre.findall('.//route-table'):
+            if table.findtext('table-name') == 'inet.0':
+                print table.nsmap
+                for rt_elt in table.findall('rt'):
+                    print rt_elt.nsmap
                     route = Route._from_xml(rt_elt)
                     if route:
                         routes.append(route)
