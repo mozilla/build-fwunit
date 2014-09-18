@@ -172,6 +172,7 @@ class Firewall(object):
                 log.info(
                     "downloading policies from-zone %s to-zone %s (%3.0f%%)",
                     from_zone, to_zone, (100 * count / num_downloads))
+                count += 1
                 policies_xml = ssh_connection.show(
                     'security policies from-zone %s to-zone %s' % (from_zone, to_zone))
 
