@@ -20,7 +20,9 @@ It's safe to do this individually in each test script, as the results are cached
 
     from fwunit.tests import Rules
 
-    rules = Rules('/path/to/rules.json')
+    rules = Rules('source-name')
+
+The ``Rules`` class uses ``fwunit.yaml`` in the current directory to look up the proper source file for the given source name.
 
 IPs and IPSets
 --------------
@@ -63,9 +65,9 @@ Utility Methods
 The :class:`~fwunit.tests.Rules` class provides a number of useful functions for testing.
 Each method logs verbosely, so test failures should have plenty of data for debugging.
 
-.. py:class:: funit.tests.Rules(filename)
+.. py:class:: funit.tests.Rules(source_name)
 
-    :param filename: file from which to load rules
+    :param source_name: fwunit source from which to load rules
 
     .. py:method:: assertDenies(src, dst, app)
 

@@ -4,6 +4,8 @@
 
 import logging
 import json
+import yaml
+import os
 from fwunit.ip import IP, IPSet, IPPairs
 from nose.tools import ok_
 from fwunit import types
@@ -20,8 +22,12 @@ def _ipset(ip):
     return ip
 
 class Rules(object):
-    def __init__(self, filename):
-        self.rules = types.from_jsonable(json.load(open(filename))['rules'])
+    def __init__(self, source):
+        if not os.path.exists('fwunit.yaml'):
+            raise RuntimeError('Tests must be run from the directory containing `fwunit.yaml`')
+        cfg = yaml.load(open('fwunit.yaml'))
+        src_cfg = cfg[source]
+        self.rules = types.from_jsonable(json.load(open(src_cfg['output']))['rules'])
 
     def assertDenies(self, src, dst, app):
         src = _ipset(src)
