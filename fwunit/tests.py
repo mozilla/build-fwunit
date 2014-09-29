@@ -114,20 +114,16 @@ class Rules(object):
             rv.add(rule.app)
         return rv
 
-    def appsOn(self, dst, ignore_sources=None, debug=False):
-        log.info("appsOn(%r, ignore_sources=%r)" % (dst, ignore_sources))
-        rv = set()
+    def assertAllApps(self, src, dst, apps, debug=False):
+        log.info("appsOn(%r, %r, %r)" % (src, dst, apps))
+        found_apps = set()
         for rule in self.rules:
-            if not debug and rule.app in rv:
+            if not debug and rule.app in found_apps:
                 continue
-            if rule.dst & dst:
-                src = rule.src
-                if ignore_sources:
-                    src = src - ignore_sources
-                if src:
-                    log.info("matched policy {t.cyan}{name}{t.normal} app {t.bold_cyan}{app}{t.normal}\n"
-                             "{t.yellow}{src}{t.normal} -> {t.magenta}{dst}{t.normal}".format(
-                                t=terminal, name=rule.name, src=src, dst=rule.dst & dst, app=rule.app))
-                    rv.add(rule.app)
-        return rv
-
+            if rule.dst & dst and rule.src & src:
+                log.info("matched policy {t.cyan}{name}{t.normal} app {t.bold_cyan}{app}{t.normal}\n"
+                            "{t.yellow}{src}{t.normal} -> {t.magenta}{dst}{t.normal}".format(
+                            t=terminal, name=rule.name, src=src, dst=rule.dst & dst, app=rule.app))
+                found_apps.add(rule.app)
+        if found_apps != set(apps):
+            raise AssertionError("got apps %r; expected %r" % (list(found_apps), list(apps)))

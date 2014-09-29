@@ -109,12 +109,15 @@ Each method logs verbosely, so test failures should have plenty of data for debu
 
         This is useful for verifying that access between two sets of hosts is limited to a short list of applications.
 
-    .. py:method:: appsOn(dst, ignore_sources=None, debug=False)
+    .. py:method:: assertAllApps(src, dst, apps, debug=False)
 
+        :param src source IPs
         :param dst: destination IPs
-        :param ignore_sources: source IPs to ignore
+        :param apps: expected list of applications
         :param debug: if True, log the full list of matching flows
 
-        Return a set of applications with access to dst, ignoring flows from ignore_sources.
+        Verify that the set of applications with access from any host in ``src`` to any host in ``dst`` is ``apps``.
+
+        This is useful for verifying that other tests have covered all of the open applications.
 
         This is useful to verify that there are no unexpected applications allowed on a host.
