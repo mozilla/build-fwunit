@@ -15,6 +15,7 @@ setup(
     name='fwunit',
     description='Unit tests for firewall rules',
     author='Dustin J. Mitchell',
+    url='https://github.com/mozilla/build-fwunit',
     author_email='dustin@mozilla.com',
     packages=find_packages(),
     version=versioneer.get_version(),
