@@ -3,3 +3,4 @@ rules.pkl
 *.pyc
 *.egg-info
 dist/
+MANIFEST
