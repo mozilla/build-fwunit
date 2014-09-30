@@ -308,7 +308,14 @@ def test_parse_zones():
     zones = fw._parse_zones(show.Connection(fake_cfg))
     eq_(sorted([str(r) for r in zones]),
         sorted(["untrust on ['reth0']", "trust on ['reth0']"]))
-    eq_(sorted(zones)[0].addresses['host1'], IPSet([IP('9.0.9.1')]))
+    eq_(sorted(z.addresses for z in zones), sorted([{
+            'any': IPSet([IP('0.0.0.0/0')]),
+        }, {
+            'hosts': IPSet([IP('9.0.9.1'), IP('9.0.9.2')]),
+            'any': IPSet([IP('0.0.0.0/0')]),
+            'host1': IPSet([IP('9.0.9.1')]),
+            'host2': IPSet([IP('9.0.9.2')]),
+        }]))
 
 
 def test_parse_policies():
