@@ -23,7 +23,6 @@ class AppsQuery(base.Query):
         super(AppsQuery, self).__init__(subparser)
 
     def run(self, args, cfg):
-        source_file = cfg[args.source]['output']
-        rules = tests.Rules(source_file)
+        rules = tests.Rules(args.source)
         for app in sorted(rules.allApps(args.src_ip, args.dst_ip)):
             print app

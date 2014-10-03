@@ -30,8 +30,7 @@ class PermittedQuery(base.Query):
 
     def run(self, args, cfg):
         terminal = Terminal()
-        source_file = cfg[args.source]['output']
-        rules = tests.Rules(source_file)
+        rules = tests.Rules(args.source)
         try:
             rules.assertPermits(args.src_ip, args.dst_ip, args.app)
         except AssertionError:
