@@ -282,7 +282,7 @@ def test_parse_zones_empty():
     elt = parse_xml(zones_empty_xml, './/security-zone')
     z = parse.Zone._from_xml(elt)
     eq_(z.interfaces, [])
-    eq_(z.addresses.keys(), ['any'])
+    eq_(sorted(z.addresses.keys()), sorted(['any', 'any-ipv6']))
 
 def test_parse_route_11_4R6():
     elt = parse_xml(route_xml_11_4R6, './/rt')
@@ -310,9 +310,11 @@ def test_parse_zones():
         sorted(["untrust on ['reth0']", "trust on ['reth0']"]))
     eq_(sorted(z.addresses for z in zones), sorted([{
             'any': IPSet([IP('0.0.0.0/0')]),
+            'any-ipv6': IPSet([]),
         }, {
-            'hosts': IPSet([IP('9.0.9.1'), IP('9.0.9.2')]),
             'any': IPSet([IP('0.0.0.0/0')]),
+            'any-ipv6': IPSet([]),
+            'hosts': IPSet([IP('9.0.9.1'), IP('9.0.9.2')]),
             'host1': IPSet([IP('9.0.9.1')]),
             'host2': IPSet([IP('9.0.9.2')]),
         }]))

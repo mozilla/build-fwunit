@@ -152,9 +152,6 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
         if 'any' in apps:
             apps = all_apps
         for app in apps:
-            # the 'any-ipv6' app is ignored; fwunit doesn't support ipv6
-            if app == 'any-ipv6':
-                continue
             # for each app, count down the IP pairs that have not matched a
             # rule yet, starting with the zones' IP spaces.  This simulates sequential
             # processing of the policies.
