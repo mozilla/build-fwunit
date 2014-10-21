@@ -4,8 +4,8 @@
 
 import xml.etree.ElementTree as ET
 from fwunit.ip import IP, IPSet
-from . import parse
-from . import show
+from fwunit.srx import parse
+from fwunit.srx import show
 from nose.tools import eq_
 import mock
 
