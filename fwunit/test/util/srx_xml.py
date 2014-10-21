@@ -44,6 +44,35 @@ route_xml = """\
                     </nh>
                 </rt-entry>
             </rt>
+            <rt junos:style="brief">
+                <rt-destination>10.0.0.0/8</rt-destination>
+                <rt-entry>
+                    <active-tag>*</active-tag>
+                    <current-active/>
+                    <last-active/>
+                    <protocol-name>OSPF</protocol-name>
+                    <preference>150</preference>
+                    <age junos:seconds="13685128">222w4d 09:25:28</age>
+                    <metric>0</metric>
+                    <rt-tag>0</rt-tag>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>1.2.3.4</to>
+                        <via>reth1</via>
+                    </nh>
+                </rt-entry>
+                <rt-entry>
+                    <active-tag> </active-tag>
+                    <protocol-name>Static</protocol-name>
+                    <preference>200</preference>
+                    <age junos:seconds="13685185">22w4d 09:26:25</age>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>1.2.3.5</to>
+                        <via>reth0</via>
+                    </nh>
+                </rt-entry>
+            </rt>
         </route-table>
     </route-information>
     <cli>
@@ -117,6 +146,10 @@ zones_xml = """\
                                 <name>host2</name>
                                 <ip-prefix>9.0.9.2/32</ip-prefix>
                             </address>
+                            <address>
+                                <name>puppet</name>
+                                <ip-prefix>9.0.9.2/32</ip-prefix>
+                            </address>
                             <address-set>
                                 <name>hosts</name>
                                 <address>
@@ -145,9 +178,21 @@ zones_xml = """\
                     <security-zone>
                         <name>trust</name>
                         <address-book>
+                            <address>
+                                <name>trustedhost</name>
+                                <ip-prefix>10.0.9.2/32</ip-prefix>
+                            </address>
+                            <address>
+                                <name>dmz</name>
+                                <ip-prefix>10.1.0.0/16</ip-prefix>
+                            </address>
+                            <address>
+                                <name>shadow</name>
+                                <ip-prefix>10.1.99.99/32</ip-prefix>
+                            </address>
                         </address-book>
                         <interfaces>
-                            <name>reth0</name>
+                            <name>reth1</name>
                             <host-inbound-traffic>
                                 <system-services>
                                     <name>ping</name>
@@ -193,37 +238,7 @@ policy_xml = """\
                         <destination-zone-name>%(to_zone)s</destination-zone-name>
                     </context-information>
                     <policies>
-                        <policy-information>
-                            <policy-name>permit</policy-name>
-                            <policy-state>enabled</policy-state>
-                            <policy-identifier>2706</policy-identifier>
-                            <scope-policy-identifier>0</scope-policy-identifier>
-                            <policy-sequence-number>1</policy-sequence-number>
-                            <source-addresses junos:style="brief">
-                                <source-address>
-                                    <address-name>any</address-name>
-                                </source-address>
-                            </source-addresses>
-                            <destination-addresses junos:style="brief">
-                                <destination-address>
-                                    <address-name>any</address-name>
-                                </destination-address>
-                            </destination-addresses>
-                            <applications junos:style="brief">
-                                <application>
-                                    <application-name>%(from_zone)s-%(to_zone)s</application-name>
-                                </application>
-                            </applications>
-                            <source-identities junos:style="brief"></source-identities>
-                            <policy-action>
-                                <action-type>permit</action-type>
-                                <policy-tcp-options>
-                                    <policy-tcp-options-syn-check>No</policy-tcp-options-syn-check>
-                                    <policy-tcp-options-sequence-check>No</policy-tcp-options-sequence-check>
-                                </policy-tcp-options>
-                            </policy-action>
-                            <policy-application-services></policy-application-services>
-                        </policy-information>
+%(policies)s
                     </policies>
                 </security-context>
             </security-policies>
@@ -236,5 +251,36 @@ policy_xml = """\
 </rpc-reply>
 """
 
-
-
+policy_tpl = """
+    <policy-information>
+        <policy-name>%(name)s</policy-name>
+        <policy-state>enabled</policy-state>
+        <policy-identifier>2706</policy-identifier>
+        <scope-policy-identifier>0</scope-policy-identifier>
+        <policy-sequence-number>%(sequence)s</policy-sequence-number>
+        <source-addresses junos:style="brief">
+            <source-address>
+                <address-name>%(src)s</address-name>
+            </source-address>
+        </source-addresses>
+        <destination-addresses junos:style="brief">
+            <destination-address>
+                <address-name>%(dst)s</address-name>
+            </destination-address>
+        </destination-addresses>
+        <applications junos:style="brief">
+            <application>
+                <application-name>%(app)s</application-name>
+            </application>
+        </applications>
+        <source-identities junos:style="brief"></source-identities>
+        <policy-action>
+            <action-type>%(action)s</action-type>
+            <policy-tcp-options>
+                <policy-tcp-options-syn-check>No</policy-tcp-options-syn-check>
+                <policy-tcp-options-sequence-check>No</policy-tcp-options-sequence-check>
+            </policy-tcp-options>
+        </policy-action>
+        <policy-application-services></policy-application-services>
+    </policy-information>
+"""
