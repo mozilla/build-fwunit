@@ -1,6 +1,4 @@
 language: python
 python: "2.7"
-install: pip install -e .[srx,aws,docs]
-script:
-    - nosetests
-    - sphinx-build docs build
+install: pip install -e .[srx,aws,docs] coverage
+script: ./validate.sh
