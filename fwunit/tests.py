@@ -6,6 +6,7 @@ import logging
 import json
 import yaml
 import os
+import itertools
 from fwunit.ip import IP, IPSet, IPPairs
 from nose.tools import ok_
 from fwunit import types
@@ -34,10 +35,7 @@ class Rules(object):
         dst = _ipset(dst)
         log.info("assertDenies(%r, %r, %r)" % (src, dst, app))
         failures = 0
-        for rule in self.rules:
-            # TODO: it'd be useful to have rules by app here
-            if rule.app != app:
-                continue
+        for rule in self.rules.get(app, []):
             src_matches = (rule.src & src)
             if not src_matches:
                 continue
@@ -60,10 +58,7 @@ class Rules(object):
         dst = _ipset(dst)
         log.info("assertPermits(%r, %r, %r)" % (src, dst, app))
         remaining = IPPairs((src, dst))
-        for rule in self.rules:
-            # TODO: useful to have rules by app here
-            if rule.app != app:
-                continue
+        for rule in self.rules.get(app, []):
             if (rule.src & src) and (rule.dst & dst):
                 log.info("matched policy {t.cyan}{name}{t.normal}\n{t.yellow}{src}{t.normal} "
                          "-> {t.magenta}{dst}{t.normal}".format(
@@ -76,13 +71,10 @@ class Rules(object):
                                  .format(t=terminal, app=app, flows=flows))
 
     def sourcesFor(self, dst, app, ignore_sources=None):
-        # TODO: useful to have rules by app here, too!
         dst = _ipset(dst)
         log.info("sourcesFor(%r, %r, ignore_sources=%r)" % (dst, app, ignore_sources))
         rv = IPSet()
-        for rule in self.rules:
-            if rule.app != app:
-                continue
+        for rule in self.rules.get(app, []):
             if rule.dst & dst:
                 src = rule.src
                 if ignore_sources:
@@ -99,7 +91,7 @@ class Rules(object):
         dst = _ipset(dst)
         log.info("appsTo(%r, %r)" % (src, dst))
         rv = set()
-        for rule in self.rules:
+        for rule in itertools.chain(*self.rules.itervalues()):
             if not debug and rule.app in rv:
                 continue
             src_matches = (rule.src & src)
@@ -117,7 +109,7 @@ class Rules(object):
     def assertAllApps(self, src, dst, apps, debug=False):
         log.info("appsOn(%r, %r, %r)" % (src, dst, apps))
         found_apps = set()
-        for rule in self.rules:
+        for rule in itertools.chain(*self.rules.itervalues()):
             if not debug and rule.app in found_apps:
                 continue
             if rule.dst & dst and rule.src & src:
