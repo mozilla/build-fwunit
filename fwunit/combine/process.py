@@ -21,9 +21,7 @@ def combine(input_rules):
     all_apps = set()
     for name, info in input_rules.iteritems():
         ip_space = IPSet([IP(s) for s in info['ip_space']])
-        rules_by_app = {}
-        for r in info['rules']:
-            rules_by_app.setdefault(r.app, []).append(r)
+        rules_by_app = info['rules']
         all_apps = all_apps | set(rules_by_app)
         address_spaces.append(
             AddressSpace(rules=rules_by_app, ip_space=ip_space,
@@ -46,7 +44,7 @@ def combine(input_rules):
         address_spaces.append(
             AddressSpace(rules=rules, ip_space=unmanaged_space, name="unmanaged"))
 
-    combined_rules = []
+    combined_rules = {}
     for app in all_apps:
         logger.info("combining app %s", app)
         # The idea here is this: for each pair of address spaces, look at rules
@@ -76,7 +74,7 @@ def combine(input_rules):
                         combined_dst = local_dst & rr.dst
                         if not combined_dst:
                             continue
-                        combined_rules.append(Rule(
+                        combined_rules.setdefault(app, []).append(Rule(
                             src=combined_src,
                             dst=combined_dst,
                             app=app,

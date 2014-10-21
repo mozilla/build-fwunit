@@ -116,7 +116,7 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
             sgrule.app = app
             all_apps.add(app)
 
-    rules = []
+    rules = {}
     to_intersect = {}
     def make_rules(sgid, local):
         sg = security_groups[sgid]
@@ -141,13 +141,13 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
                         if dir == 'in':
                             unmanaged_src = src & unmanaged_ip_space
                             if unmanaged_src:
-                                rules.append(Rule(
+                                rules.setdefault(app, []).append(Rule(
                                     src=unmanaged_src, dst=dst, app=app, name=name))
                             src = src & managed_ip_space
                         else:
                             unmanaged_dst = dst & unmanaged_ip_space
                             if unmanaged_dst:
-                                rules.append(Rule(
+                                rules.setdefault(app, []).append(Rule(
                                     src=src, dst=unmanaged_dst, app=app, name=name))
                             dst = dst & managed_ip_space
                         if src and dst:
@@ -173,7 +173,8 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
     logger.info("assuming unrestricted outbound access from unoccupied IPs in per-host subnets")
     unoccupied = per_host_subnet_ips - per_host_host_ips
     for app in all_apps:
-        rules.append(Rule(src=unoccupied, dst=unmanaged_ip_space, app=app, name='unoccupied/out'))
+        rules.setdefault(app, []).append(Rule(
+            src=unoccupied, dst=unmanaged_ip_space, app=app, name='unoccupied/out'))
         to_intersect.setdefault(app, {}).setdefault('out', []).append((unoccupied, managed_ip_space, 'unoccupied/out'))
 
     # traffic within the manage Ip space is governed both by outbound rules on
@@ -195,8 +196,8 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
                 new_rules.append(Rule(src=src, dst=dst, app=app,
                                       name=combine_names(inr[2], outr[2])))
         # simplify now, within this app, to save space and time
-        new_rules = simplify_rules(new_rules)
-        rules.extend(new_rules)
+        new_rules = simplify_rules({app: new_rules})[app]
+        rules.setdefault(app, []).extend(new_rules)
 
     rules = simplify_rules(rules)
     return rules

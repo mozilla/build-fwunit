@@ -6,6 +6,7 @@
 
 from fwunit.ip import IPSet, IP
 from collections import namedtuple
+import itertools
 
 Rule = namedtuple('Rule', ['src', 'dst', 'app', 'name'])
 
@@ -19,7 +20,7 @@ def to_jsonable(rules):
              'dst': ipset_to_jsonable(r.dst),
              'app': r.app,
              'name': r.name}
-            for r in rules]
+            for r in itertools.chain(*rules.itervalues())]
 
 
 def ipset_from_jsonable(ipset):
@@ -27,8 +28,12 @@ def ipset_from_jsonable(ipset):
 
 
 def from_jsonable(rules):
-    return [Rule(src=ipset_from_jsonable(r['src']),
-                 dst=ipset_from_jsonable(r['dst']),
-                 app=r['app'],
-                 name=r['name'])
-            for r in rules]
+    by_app = {}
+    for d in rules:
+        r = Rule(src=ipset_from_jsonable(d['src']),
+                 dst=ipset_from_jsonable(d['dst']),
+                 app=d['app'],
+                 name=d['name'])
+        app = r.app
+        by_app.setdefault(app, []).append(r)
+    return by_app
