@@ -107,6 +107,8 @@ class Rules(object):
         return rv
 
     def assertAllApps(self, src, dst, apps, debug=False):
+        src = _ipset(src)
+        dst = _ipset(dst)
         log.info("appsOn(%r, %r, %r)" % (src, dst, apps))
         found_apps = set()
         for rule in itertools.chain(*self.rules.itervalues()):

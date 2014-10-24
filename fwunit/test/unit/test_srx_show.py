@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from . import show
+from fwunit.srx import show
 from nose.tools import eq_
 import mock
 from cStringIO import StringIO

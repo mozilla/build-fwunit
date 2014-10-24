@@ -2,12 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import xml.etree.ElementTree as ET
-from fwunit.ip import IP, IPSet
-from . import parse
-from . import show
-from nose.tools import eq_
-import mock
+## fake XML results derived from the output of a Juniper SRX
 
 route_xml = """\
 <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
@@ -35,6 +30,35 @@ route_xml = """\
                         <selected-next-hop/>
                         <to>1.2.3.4</to>
                         <via>reth0</via>
+                    </nh>
+                </rt-entry>
+                <rt-entry>
+                    <active-tag> </active-tag>
+                    <protocol-name>Static</protocol-name>
+                    <preference>200</preference>
+                    <age junos:seconds="13685185">22w4d 09:26:25</age>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>1.2.3.5</to>
+                        <via>reth0</via>
+                    </nh>
+                </rt-entry>
+            </rt>
+            <rt junos:style="brief">
+                <rt-destination>10.0.0.0/8</rt-destination>
+                <rt-entry>
+                    <active-tag>*</active-tag>
+                    <current-active/>
+                    <last-active/>
+                    <protocol-name>OSPF</protocol-name>
+                    <preference>150</preference>
+                    <age junos:seconds="13685128">222w4d 09:25:28</age>
+                    <metric>0</metric>
+                    <rt-tag>0</rt-tag>
+                    <nh>
+                        <selected-next-hop/>
+                        <to>1.2.3.4</to>
+                        <via>reth1</via>
                     </nh>
                 </rt-entry>
                 <rt-entry>
@@ -122,6 +146,10 @@ zones_xml = """\
                                 <name>host2</name>
                                 <ip-prefix>9.0.9.2/32</ip-prefix>
                             </address>
+                            <address>
+                                <name>puppet</name>
+                                <ip-prefix>9.0.9.2/32</ip-prefix>
+                            </address>
                             <address-set>
                                 <name>hosts</name>
                                 <address>
@@ -150,9 +178,21 @@ zones_xml = """\
                     <security-zone>
                         <name>trust</name>
                         <address-book>
+                            <address>
+                                <name>trustedhost</name>
+                                <ip-prefix>10.0.9.2/32</ip-prefix>
+                            </address>
+                            <address>
+                                <name>dmz</name>
+                                <ip-prefix>10.1.0.0/16</ip-prefix>
+                            </address>
+                            <address>
+                                <name>shadow</name>
+                                <ip-prefix>10.1.99.99/32</ip-prefix>
+                            </address>
                         </address-book>
                         <interfaces>
-                            <name>reth0</name>
+                            <name>reth1</name>
                             <host-inbound-traffic>
                                 <system-services>
                                     <name>ping</name>
@@ -198,37 +238,7 @@ policy_xml = """\
                         <destination-zone-name>%(to_zone)s</destination-zone-name>
                     </context-information>
                     <policies>
-                        <policy-information>
-                            <policy-name>permit</policy-name>
-                            <policy-state>enabled</policy-state>
-                            <policy-identifier>2706</policy-identifier>
-                            <scope-policy-identifier>0</scope-policy-identifier>
-                            <policy-sequence-number>1</policy-sequence-number>
-                            <source-addresses junos:style="brief">
-                                <source-address>
-                                    <address-name>any</address-name>
-                                </source-address>
-                            </source-addresses>
-                            <destination-addresses junos:style="brief">
-                                <destination-address>
-                                    <address-name>any</address-name>
-                                </destination-address>
-                            </destination-addresses>
-                            <applications junos:style="brief">
-                                <application>
-                                    <application-name>%(from_zone)s-%(to_zone)s</application-name>
-                                </application>
-                            </applications>
-                            <source-identities junos:style="brief"></source-identities>
-                            <policy-action>
-                                <action-type>permit</action-type>
-                                <policy-tcp-options>
-                                    <policy-tcp-options-syn-check>No</policy-tcp-options-syn-check>
-                                    <policy-tcp-options-sequence-check>No</policy-tcp-options-sequence-check>
-                                </policy-tcp-options>
-                            </policy-action>
-                            <policy-application-services></policy-application-services>
-                        </policy-information>
+%(policies)s
                     </policies>
                 </security-context>
             </security-policies>
@@ -241,93 +251,36 @@ policy_xml = """\
 </rpc-reply>
 """
 
-
-def fake_show(request):
-    if request == 'route':
-        return route_xml
-    elif request == 'configuration security zones':
-        return zones_xml
-    elif request.startswith('security policies'):
-        request = request.split()
-        from_zone, to_zone = request[3], request[5]
-        return policy_xml % dict(from_zone=from_zone, to_zone=to_zone)
-    else:
-        raise AssertionError("bad request")
-
-fake_cfg = dict(firewall='fw', ssh_username='uu', ssh_password='pp')
-conn_patch = mock.patch('fwunit.srx.show.Connection', spec=show.Connection)
-
-
-def parse_xml(xml, elt_path=None):
-    elt = parse.strip_namespaces(ET.fromstring(xml))
-    if elt_path:
-        elt = elt.find(elt_path)
-    return elt
-
-
-def setup_module():
-    m = conn_patch.start()
-    m().show.side_effect = fake_show
-
-
-def teardown_module():
-    conn_patch.stop()
-
-#
-# Unit tests
-#
-
-
-def test_parse_zones_empty():
-    elt = parse_xml(zones_empty_xml, './/security-zone')
-    z = parse.Zone._from_xml(elt)
-    eq_(z.interfaces, [])
-    eq_(sorted(z.addresses.keys()), sorted(['any', 'any-ipv6']))
-
-def test_parse_route_11_4R6():
-    elt = parse_xml(route_xml_11_4R6, './/rt')
-    r = parse.Route._from_xml(elt)
-    eq_(r.destination, IP('0.0.0.0/0'))
-    eq_(r.interface, 'reth0.10')
-    eq_(r.is_local, False)
-
-#
-# Integration-style tests
-#
-# These use Firewall._parse_*, passing in raw XML
-
-
-def test_parse_routes():
-    fw = parse.Firewall()
-    routes = fw._parse_routes(show.Connection(fake_cfg))
-    eq_([str(r) for r in routes], ['0.0.0.0/0 via reth0'])
-
-
-def test_parse_zones():
-    fw = parse.Firewall()
-    zones = fw._parse_zones(show.Connection(fake_cfg))
-    eq_(sorted([str(r) for r in zones]),
-        sorted(["untrust on ['reth0']", "trust on ['reth0']"]))
-    eq_(sorted(z.addresses for z in zones), sorted([{
-            'any': IPSet([IP('0.0.0.0/0')]),
-            'any-ipv6': IPSet([]),
-        }, {
-            'any': IPSet([IP('0.0.0.0/0')]),
-            'any-ipv6': IPSet([]),
-            'hosts': IPSet([IP('9.0.9.1'), IP('9.0.9.2')]),
-            'host1': IPSet([IP('9.0.9.1')]),
-            'host2': IPSet([IP('9.0.9.2')]),
-        }]))
-
-
-def test_parse_policies():
-    fw = parse.Firewall()
-    fw.zones = fw._parse_zones(show.Connection(fake_cfg))
-    policies = fw._parse_policies(show.Connection(fake_cfg))
-    eq_(sorted([str(p) for p in policies]),
-        sorted([
-            "permit trust:['any'] -> trust:['any'] : ['trust-trust']",
-            "permit trust:['any'] -> untrust:['any'] : ['trust-untrust']",
-            "permit untrust:['any'] -> trust:['any'] : ['untrust-trust']",
-            "permit untrust:['any'] -> untrust:['any'] : ['untrust-untrust']",
-        ]))
+policy_tpl = """
+    <policy-information>
+        <policy-name>%(name)s</policy-name>
+        <policy-state>enabled</policy-state>
+        <policy-identifier>2706</policy-identifier>
+        <scope-policy-identifier>0</scope-policy-identifier>
+        <policy-sequence-number>%(sequence)s</policy-sequence-number>
+        <source-addresses junos:style="brief">
+            <source-address>
+                <address-name>%(src)s</address-name>
+            </source-address>
+        </source-addresses>
+        <destination-addresses junos:style="brief">
+            <destination-address>
+                <address-name>%(dst)s</address-name>
+            </destination-address>
+        </destination-addresses>
+        <applications junos:style="brief">
+            <application>
+                <application-name>%(app)s</application-name>
+            </application>
+        </applications>
+        <source-identities junos:style="brief"></source-identities>
+        <policy-action>
+            <action-type>%(action)s</action-type>
+            <policy-tcp-options>
+                <policy-tcp-options-syn-check>No</policy-tcp-options-syn-check>
+                <policy-tcp-options-sequence-check>No</policy-tcp-options-sequence-check>
+            </policy-tcp-options>
+        </policy-action>
+        <policy-application-services></policy-application-services>
+    </policy-information>
+"""
