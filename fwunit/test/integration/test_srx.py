@@ -28,7 +28,8 @@ policies = {
     ('untrust', 'trust'): [
         dict(sequence=1, name='no-shadow-ping', src='any', dst='shadow', app='ping', action='deny'),
         dict(sequence=2, name='ping', src='any', dst='dmz', app='ping', action='permit'),
-        dict(sequence=2, name='admin', src='puppet', dst='trustedhost', app='ssh', action='permit'),
+        dict(sequence=3, name='admin', src='puppet', dst='trustedhost', app='ssh', action='permit'),
+        dict(sequence=4, name='admin', src='any-ipv6', dst='trustedhost', app='ssh', action='permit'),
         dict(sequence=10, name='deny', src='any', dst='any', app='any', action='deny'),
     ],
     ('untrust', 'untrust'): [

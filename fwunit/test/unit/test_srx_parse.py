@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import xml.etree.ElementTree as ET
-from fwunit.ip import IP
+from fwunit.ip import IP, IPSet
 from fwunit.srx import parse
 from nose.tools import eq_
 from fwunit.test.util.srx_xml import route_xml_11_4R6
@@ -23,14 +23,17 @@ def test_parse_zones():
     z = parse.Zone._from_xml(elt)
     eq_(z.interfaces, ['reth0'])
     eq_(sorted(z.addresses.keys()),
-        sorted(['any', 'any-ipv6', 'host1', 'host2', 'hosts', 'puppet']))
+        sorted(['any', 'any-ipv4', 'any-ipv6', 'host1', 'host2', 'hosts', 'puppet']))
+    eq_(z.addresses['any'], IPSet([IP('0.0.0.0/0')]))
+    eq_(z.addresses['any-ipv4'], IPSet([IP('0.0.0.0/0')]))
+    eq_(z.addresses['any-ipv6'], IPSet([]))
 
 
 def test_parse_zones_empty():
     elt = parse_xml(zones_empty_xml, './/security-zone')
     z = parse.Zone._from_xml(elt)
     eq_(z.interfaces, [])
-    eq_(sorted(z.addresses.keys()), sorted(['any', 'any-ipv6']))
+    eq_(sorted(z.addresses.keys()), sorted(['any', 'any-ipv6', 'any-ipv4']))
 
 
 def test_parse_route_11_4R6():

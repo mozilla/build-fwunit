@@ -129,6 +129,7 @@ class Zone(object):
         #: name -> ipset, based on the zone's address book
         self.addresses = {
             'any': IPSet([IP('0.0.0.0/0')]),
+            'any-ipv4': IPSet([IP('0.0.0.0/0')]),
             # fwunit doesn't handle ipv6, so this is an empty set
             'any-ipv6': IPSet([]),
         }
