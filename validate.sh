@@ -2,5 +2,8 @@
 
 set -e
 
-nosetests --with-coverage --cover-package=fwunit --cover-inclusive --cover-min-percentage=46
+# nosetests --with-coverage doesn't allow you to specify a coveragerc
+coverage erase
+coverage run --rcfile=coveragerc --source=fwunit $(which nosetests)
+coverage report --rcfile=coveragerc
 sphinx-build docs build
