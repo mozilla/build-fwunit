@@ -100,6 +100,7 @@ def get_rules(aws, app_map, regions, dynamic_subnets):
     security_groups = {}
     for sgid in all_sgids:
         sg = security_groups[sgid] = aws.get_security_group(sgid)
+        assert sg, "no security group with id {}".format(sgid)
         # pre-process all of the rules' apps now
         for sgrule in itertools.chain(sg.rules, sg.rules_egress):
             proto = str(sgrule.ip_protocol)

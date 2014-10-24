@@ -36,7 +36,7 @@ class AWS(object):
                     aws_secret_access_key=self.secret_key)
         return self._vpc_connections[region]
 
-    def all_regions(self, ):
+    def all_regions(self):
         regions = boto.ec2.regions()
         return [r.name for r in regions]
 
