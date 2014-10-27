@@ -150,7 +150,7 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
         apps = set(itertools.chain(*[p.applications for p in zpolicies]))
         if 'any' in apps:
             apps = all_apps
-        for app in apps:
+        for app in apps | set(['@@other']):
             # for each app, count down the IP pairs that have not matched a
             # rule yet, starting with the zones' IP spaces.  This simulates sequential
             # processing of the policies.
@@ -177,6 +177,10 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
                 if not remaining_pairs:
                     break
         logger.debug(" from-zone %s to-zone %s => %d rules", from_zone, to_zone, rule_count)
+
+    # only include @@other if it's used
+    if not rules_by_app['@@other']:
+        del rules_by_app['@@other']
 
     # simplify and return the result
     return simplify_rules(rules_by_app)

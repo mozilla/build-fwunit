@@ -87,6 +87,11 @@ def test_process_rules_any_app():
                  app='junos-ssh', name='admin'),
             Rule(src=ipset('192.168.1.2/31'), dst=ipset('192.168.0.0/16'), app='junos-ssh', name='dbssh'),
         ],
+        '@@other': [
+            Rule(src=ipset('192.168.1.128'),
+                 dst=ipset('10.0.0.0/8', '128.135.0.0/16', '192.168.0.0/16'),
+                 app='@@other', name='admin'),
+        ],
     }
     [ruleset.sort() for ruleset in exp.itervalues()]
     eq_(res, exp)
