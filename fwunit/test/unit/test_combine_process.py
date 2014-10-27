@@ -31,6 +31,55 @@ def test_one_address_space():
         eq_(sorted(result), sorted(rules))
 
 
+def test_other_app():
+    ord_rules = {
+        'ordonly': [
+            Rule(ipset('1.1.0.0'), ipset('1.1.9.9'), 'ordonly', 'ordonly'),
+        ],
+        'inboth': [
+            Rule(ipset('1.1.8.8'), ipset('1.1.9.9'), 'inboth', 'inboth_ord'),
+        ],
+        '@@other': [
+            Rule(ipset('1.1.0.0'), ipset('1.1.9.9'), '@@other', 'ordother'),
+        ],
+    }
+    lga_rules = {
+        'lgaonly': [
+            Rule(ipset('65.1.0.0'), ipset('65.1.9.9'), 'lgaonly', 'lgaonly'),
+        ],
+        'inboth': [
+            Rule(ipset('65.1.8.8'), ipset('65.1.9.9'), 'inboth', 'inboth_lga'),
+        ],
+        '@@other': [
+            Rule(ipset('65.1.0.0'), ipset('65.1.9.9'), '@@other', 'lgaother'),
+        ],
+    }
+    with no_simplify():
+        result = process.combine(dict(
+            ord=dict(ip_space=['0.0.0.0/2'], rules=ord_rules),
+            lga=dict(ip_space=['64.0.0.0/2'], rules=lga_rules)))
+        for apprules in result.itervalues():
+            apprules.sort()
+        eq_(result, {
+            'ordonly': sorted([
+                Rule(ipset('1.1.0.0'), ipset('1.1.9.9'), 'ordonly', 'ordonly'),
+                Rule(ipset('65.1.0.0'), ipset('65.1.9.9'), 'ordonly', 'lgaother'),
+            ]),
+            'lgaonly': sorted([
+                Rule(ipset('65.1.0.0'), ipset('65.1.9.9'), 'lgaonly', 'lgaonly'),
+                Rule(ipset('1.1.0.0'), ipset('1.1.9.9'), 'lgaonly', 'ordother'),
+            ]),
+            'inboth': sorted([
+                Rule(ipset('1.1.8.8'), ipset('1.1.9.9'), 'inboth', 'inboth_ord'),
+                Rule(ipset('65.1.8.8'), ipset('65.1.9.9'), 'inboth', 'inboth_lga'),
+            ]),
+            '@@other': sorted([
+                Rule(ipset('1.1.0.0'), ipset('1.1.9.9'), '@@other', 'ordother'),
+                Rule(ipset('65.1.0.0'), ipset('65.1.9.9'), '@@other', 'lgaother'),
+            ]),
+        })
+
+
 def test_nonoverlapping_rules():
     nyc_rules = {'app': [
         Rule(ipset('1.2.5.0/24'), ipset('2.2.5.0/24'), 'app', 'nyc'),
