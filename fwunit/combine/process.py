@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import collections
+import itertools
 from fwunit.ip import IP, IPSet
 import logging
 from fwunit.types import Rule
@@ -44,8 +45,19 @@ def combine(input_rules):
         address_spaces.append(
             AddressSpace(rules=rules, ip_space=unmanaged_space, name="unmanaged"))
 
+    # for each address space, add any apps which aren't explicitly specified in that
+    # address space, but *are* specified in the combined ruleset, as copies of that
+    # address space's '@@other' app
+    all_apps.discard('@@other')
+    for sp in address_spaces:
+        if '@@other' not in sp.rules:
+            continue
+        missing_apps = all_apps - set(sp.rules)
+        for app in missing_apps:
+            sp.rules[app] = [Rule(src=r.src, dst=r.dst, app=app, name=r.name) for r in sp.rules['@@other']]
+
     combined_rules = {}
-    for app in all_apps:
+    for app in all_apps | set(['@@other']):
         logger.info("combining app %s", app)
         # The idea here is this: for each pair of address spaces, look at rules
         # between those address spaces, limited to those address spaces.  Only
