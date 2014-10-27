@@ -109,6 +109,8 @@ Each method logs verbosely, so test failures should have plenty of data for debu
 
         This is useful for verifying that access between two sets of hosts is limited to a short list of applications.
 
+        Note that if *any* application is allowed from ``src`` to ``dst``, this method will return ``set(['any'])`` rather than enumerating the (infinite) set of allowed applications.
+
     .. py:method:: assertAllApps(src, dst, apps, debug=False)
 
         :param src source IPs
@@ -119,5 +121,4 @@ Each method logs verbosely, so test failures should have plenty of data for debu
         Verify that the set of applications with access from any host in ``src`` to any host in ``dst`` is ``apps``.
 
         This is useful for verifying that other tests have covered all of the open applications.
-
-        This is useful to verify that there are no unexpected applications allowed on a host.
+        The same warning as for :py:meth:`allApps` applies here for rules allowing any application.

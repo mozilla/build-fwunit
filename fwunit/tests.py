@@ -30,12 +30,19 @@ class Rules(object):
         src_cfg = cfg[source]
         self.rules = types.from_jsonable(json.load(open(src_cfg['output']))['rules'])
 
+    def _rules_for_app(self, app):
+        # get the rules for the given app, or if no such app is known, for @@other
+        try:
+            return self.rules[app]
+        except KeyError:
+            return self.rules.get('@@other', [])
+
     def assertDenies(self, src, dst, app):
         src = _ipset(src)
         dst = _ipset(dst)
         log.info("assertDenies(%r, %r, %r)" % (src, dst, app))
         failures = 0
-        for rule in self.rules.get(app, []):
+        for rule in self._rules_for_app(app):
             src_matches = (rule.src & src)
             if not src_matches:
                 continue
@@ -58,7 +65,7 @@ class Rules(object):
         dst = _ipset(dst)
         log.info("assertPermits(%r, %r, %r)" % (src, dst, app))
         remaining = IPPairs((src, dst))
-        for rule in self.rules.get(app, []):
+        for rule in self._rules_for_app(app):
             if (rule.src & src) and (rule.dst & dst):
                 log.info("matched policy {t.cyan}{name}{t.normal}\n{t.yellow}{src}{t.normal} "
                          "-> {t.magenta}{dst}{t.normal}".format(
@@ -74,7 +81,7 @@ class Rules(object):
         dst = _ipset(dst)
         log.info("sourcesFor(%r, %r, ignore_sources=%r)" % (dst, app, ignore_sources))
         rv = IPSet()
-        for rule in self.rules.get(app, []):
+        for rule in self._rules_for_app(app):
             if rule.dst & dst:
                 src = rule.src
                 if ignore_sources:
@@ -104,6 +111,8 @@ class Rules(object):
                      "{t.yellow}{src}{t.normal} -> {t.magenta}{dst}{t.normal}".format(
                         t=terminal, name=rule.name, src=src_matches, dst=dst_matches, app=rule.app))
             rv.add(rule.app)
+        if '@@other' in rv:
+            rv = set(['any'])
         return rv
 
     def assertAllApps(self, src, dst, apps, debug=False):
