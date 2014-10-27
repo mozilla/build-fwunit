@@ -3,12 +3,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from nose.tools import eq_
-from fwunit.ip import IP, IPSet
 from fwunit.types import Rule
 from fwunit.combine import process
-
-def ipset(*ips):
-    return IPSet(map(IP, ips))
+from fwunit.test.util import ipset
 
 RULES_10 = {
     'http': [
