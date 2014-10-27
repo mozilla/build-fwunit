@@ -138,12 +138,11 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
     # order and accounting for denies.  We do this once for each
     # (from_zone, to_zone, app) tuple.  The other tricky bit is handling
     # the application "any", which we treat as including all applications
-    # used anywhere.
+    # used anywhere, and also record in a special "@@other" app.
     rules_by_app = {}
     all_apps = set(itertools.chain(*[p.applications for p in policies]))
     all_apps = all_apps | set(app_map.keys())
-    if 'any' in all_apps:
-        all_apps.remove('any')
+    all_apps.discard('any')
     for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
         logger.debug(" from-zone %s to-zone %s (%d policies)", from_zone, to_zone, len(zpolicies))
         rule_count = 0
