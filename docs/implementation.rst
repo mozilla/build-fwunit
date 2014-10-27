@@ -26,3 +26,5 @@ The rules are normalized as follows (and this is what consumes most of the time 
    match; stated differently, there's no need to consider rules in order.
 
  * If traffic matches a rule, it is permitted.  If no rule matches, it is denied.
+
+ * Policies allowing any application are represented by explicit rules for each known application, with the addition of rules with application '@@other' to represent the unknown applications.
