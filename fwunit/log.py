@@ -29,7 +29,6 @@ class ColoredFormatter(logging.Formatter):
 
 def setup(verbose):
     terminal = Terminal()
-    assert 0
     clifmt = ColoredFormatter(
         terminal,
         '[%(asctime)s] %(message)s')
