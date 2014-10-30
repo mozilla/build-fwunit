@@ -23,8 +23,12 @@ def to_jsonable(rules):
             for r in itertools.chain(*rules.itervalues())]
 
 
-def ipset_from_jsonable(ipset):
-    return IPSet([IP(pfx) for pfx in ipset])
+def ipset_from_jsonable(ipset, _cache={}):
+    ipset = tuple(ipset)
+    if ipset not in _cache:
+        _cache[ipset] = rv = IPSet([IP(pfx) for pfx in ipset])
+        return rv
+    return _cache[ipset]
 
 
 def from_jsonable(rules):
