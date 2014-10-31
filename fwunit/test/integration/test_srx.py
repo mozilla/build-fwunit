@@ -17,19 +17,19 @@ from fwunit.srx import show
 
 policies = {
     ('trust', 'trust'): [
-        dict(sequence=1, name='ssh--any', src='any', dst='any', app='ssh', action='permit'),
+        dict(sequence=1, name='ssh--any', src='any', dst='any', app='junos-ssh', action='permit'),
         dict(sequence=10, name='deny', src='any', dst='any', app='any', action='deny'),
     ],
     ('trust', 'untrust'): [
-        dict(sequence=1, name='ssh-untrust', src='any', dst='any', app='ssh', action='permit'),
+        dict(sequence=1, name='ssh-untrust', src='any', dst='any', app='junos-ssh', action='permit'),
         dict(sequence=2, name='puppet', src='any', dst='puppet', app='puppet', action='permit'),
         dict(sequence=10, name='deny', src='any', dst='any', app='any', action='deny'),
     ],
     ('untrust', 'trust'): [
-        dict(sequence=1, name='no-shadow-ping', src='any', dst='shadow', app='ping', action='deny'),
-        dict(sequence=2, name='ping', src='any', dst='dmz', app='ping', action='permit'),
-        dict(sequence=3, name='admin', src='puppet', dst='trustedhost', app='ssh', action='permit'),
-        dict(sequence=4, name='admin', src='any-ipv6', dst='trustedhost', app='ssh', action='permit'),
+        dict(sequence=1, name='no-shadow-ping', src='any', dst='shadow', app='junos-ping', action='deny'),
+        dict(sequence=2, name='ping', src='any', dst='dmz', app='junos-ping', action='permit'),
+        dict(sequence=3, name='admin', src='puppet', dst='trustedhost', app='junos-ssh', action='permit'),
+        dict(sequence=4, name='admin', src='any-ipv6', dst='trustedhost', app='junos-ssh', action='permit'),
         dict(sequence=10, name='deny', src='any', dst='any', app='any', action='deny'),
     ],
     ('untrust', 'untrust'): [
@@ -65,14 +65,16 @@ def teardown_module():
 
 
 def test_parse_routes():
-    fake_cfg = dict(
-        firewall='fw',
-        ssh_username='uu',
-        ssh_password='pp')
+    fake_cfg = {
+        'firewall': 'fw',
+        'ssh_username': 'uu',
+        'ssh_password': 'pp',
+        'application-map': {'junos-ssh': 'ssh', 'junos-ping': 'ping'},
+    }
     rules = scripts.run(fake_cfg, {})
     for r in rules.itervalues():
         r.sort()
-    eq_(rules, {
+    exp = {
         'ping': [
             Rule(src=IPSet([IP('0.0.0.0/0')]) - IPSet([IP('10.0.0.0/8')]),
                  dst=IPSet([IP('10.1.0.0/16')]) - IPSet([IP('10.1.99.99')]),
@@ -88,4 +90,5 @@ def test_parse_routes():
             Rule(src=IPSet([IP('10.0.0.0/8')]), dst=IPSet([IP('0.0.0.0/0')]), app='ssh',
                  name='ssh--any+ssh-untrust'),
         ],
-    })
+    }
+    eq_(rules, exp)
