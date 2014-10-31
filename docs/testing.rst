@@ -4,11 +4,56 @@ Writing Tests
 Flow tests are just like software unit tests: they make assertions about the state of the system under test.
 In the case of flow tests, that means asserting that traffic can, or cannot, flow between particular systems.
 
-The functions given here enable such tests.
+Here's how to write flow tests.
 
-.. warning::
+Example
+-------
 
-    The details here may change substantially before fwunit-1.0 is released.
+The following might be in a file named `test_puppet.py`.
+
+.. code-block:: python
+
+    from fwunit.tests import Rules
+    from fwunit.ip import IP, IPSet
+
+    rules = Rules('my-network')
+
+    # hosts
+
+    internal_network = IPSet([IP('192.168.1.0/24'), IP('192.168.13.0/24')])
+    external_network = IPSet([IP('0.0.0.0/0')]) - internal_network
+    puppetmasters = IPSet([IP(ip) for ip in
+        '192.168.13.45',
+        '192.168.13.50',
+    ])
+
+    # tests
+
+    """
+    Puppetmasters serve puppet catalogs and data to clients over 'puppet',
+    'http', and 'https'.  All hosts in the internal network should have access.
+    """
+
+    def test_puppetmaster_access():
+        """The entire internal_network can access the puppet masters."""
+        for app in 'puppet', 'http', 'https':
+            fw1.assertPermits(internal_network, puppetmasters, app)
+
+    def test_puppetmaster_no_other_apps():
+        """Access to puppetmasters is limited to puppet, http, and https"""
+        fw1.assertAllApps(IPSet([IP('0.0.0.0/0')]), puppetmasters,
+                          ['puppet', 'http', 'https'])
+
+    def test_puppetmaster_limited():
+        """The exteernal networks cannot access the puppet masters."""
+        for app in 'puppet', 'http', 'https':
+            fw1.assertDenies(external_network, puppetmasters, app)
+
+Running this test is as simple as
+
+.. code-block:: none
+    
+    $ nosetests test_puppet.py
 
 Loading Rules
 -------------
@@ -56,7 +101,7 @@ Once you have the rules loaded, you can start writing test methods::
     ])
 
     def test_puppetmaster_access():
-        for app in 'puppet', 'junos-http', 'junos-https':
+        for app in 'puppet', 'http', 'https':
             fw1.assertPermits(internal_network, puppetmasters, app)
 
 Utility Methods
