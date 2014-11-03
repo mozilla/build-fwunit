@@ -35,5 +35,5 @@ def setup(verbose):
     root_logger = logging.getLogger()
     clihandler = logging.StreamHandler(sys.stdout)
     clihandler.setFormatter(clifmt)
-    root_logger.setLevel(logging.NOTSET)
+    root_logger.setLevel(logging.NOTSET if verbose else logging.WARNING)
     root_logger.addHandler(clihandler)
