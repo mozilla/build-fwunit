@@ -13,6 +13,8 @@ Any developer worth their salt tests their software.  The benefits are many:
 
 With `fwunit`, you can do the same for security policies on your network.
 
+![demo](https://github.com/mozilla/build-fwunit/raw/master/example/output.gif)
+
 Documentation
 =============
 

@@ -29,6 +29,7 @@ def setup_module():
     }))
     json.dump({'rules': types.to_jsonable(TEST_RULES)},
               open('test_source.json', 'w'))
+    shutil.copy(os.path.join(dir, 'test_source.json'), '/tmp/foo.json')
     rules = Rules('test_source')
 
 def teardown_module():

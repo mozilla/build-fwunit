@@ -1,0 +1,11 @@
+my-network:
+    type: aws
+    output: my-network.json
+    dynamic_subnets: [workers]
+    regions: [us-east-1]
+    credentials:
+        access_key: ...
+        secret_key: ...
+    application-map:
+        22/tcp: ssh
+        8140/tcp: puppet
