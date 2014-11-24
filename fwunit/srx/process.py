@@ -133,7 +133,6 @@ def process_address_sets_per_policy(zones, policies_by_zone_pair):
 def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
                   src_per_policy, dst_per_policy):
     logger.info("processing rules")
-    print app_map.keys()
     # turn policies into a list of Rules (permit only), limited by zone,
     # that do not overlap.  The tricky bit here is processing policies in
     # order and accounting for denies.  We do this once for each
@@ -172,7 +171,6 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
                         d = d & dst
                         if len(s) and len(d):
                             rules.append(Rule(s, d, mapped_app, pol.name))
-                            print rules[-1]
                             rule_count += 1
                 # regardless, consider this src/dst pair matched
                 remaining_pairs = remaining_pairs - IPPairs((src, dst))
