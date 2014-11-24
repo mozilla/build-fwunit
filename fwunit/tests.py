@@ -129,4 +129,4 @@ class Rules(object):
                             t=terminal, name=rule.name, src=src, dst=rule.dst & dst, app=rule.app))
                 found_apps.add(rule.app)
         if found_apps != set(apps):
-            raise AssertionError("got apps %r; expected %r" % (list(found_apps), list(apps)))
+            raise AssertionError("got apps %r; expected %r" % (sorted(list(found_apps)), sorted(list(apps))))
