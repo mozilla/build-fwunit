@@ -118,17 +118,19 @@ Each method logs verbosely, so test failures should have plenty of data for debu
 
         :param src: source IPs
         :param dst: destination IPs
-        :param app: application
+        :param apps: application names
+        :type apps: list or string
 
-        Assert that application traffic is denied from any given source IP to any given destination IP.
+        Assert that traffic is denied from any given source IP to any given destination IP for all given applications.
 
-    .. py:method:: assertPermits(src, dst, app)
+    .. py:method:: assertPermits(src, dst, apps)
 
         :param src: source IPs
         :param dst: destination IPs
-        :param app: application
+        :param apps: application names
+        :type apps: list or string
 
-        Assert that application traffic is allowed from any given source IP to any given destination IP.
+        Assert that all given applications are allowed from any given source IP to any given destination IP.
 
     Note that ``assertDenies`` and ``assertPermits`` are not quite opposites:
     if application traffic is allowed between some IP pairs, but denied between others, then both methods will raise ``AssertionError``.
