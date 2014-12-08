@@ -43,11 +43,17 @@ def test_assertDenies():
 def test_assertDenies_from_other():
     rules.assertDenies('10.1.1.1', '10.1.0.0', 'someotherapp')
 
+def test_assertDenies_app_list():
+    rules.assertDenies('10.1.1.1', '10.1.0.0', ['ping', 'someotherapp'])
+
 def test_assertPermits():
     rules.assertPermits('99.1.1.1', '10.1.0.0', 'ping')
 
 def test_assertPermits_from_other():
     rules.assertPermits('1.2.3.4', '10.1.0.0', 'someotherapp')
+
+def test_assertPermits_app_list():
+    rules.assertPermits('99.1.1.1', '10.1.0.0', ['ping', 'someotherapp'])
 
 def test_sourcesFor():
     eq_(rules.sourcesFor('10.1.1.1', 'ssh'), ipset('10.0.0.0/8'))
