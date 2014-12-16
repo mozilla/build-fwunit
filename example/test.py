@@ -1,7 +1,7 @@
-from fwunit.tests import Rules
+from fwunit import TestContext
 from fwunit.ip import IP, IPSet
 
-rules = Rules('my-network')
+rules = TestContext('my-network')
 
 # hosts
 
