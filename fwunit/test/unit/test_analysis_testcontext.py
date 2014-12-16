@@ -8,7 +8,7 @@ import yaml
 import json
 import os
 from fwunit.test.util import ipset
-from fwunit.tests import Rules
+from fwunit.analysis.testcontext import TestContext
 from fwunit.test.util.test_rules import TEST_RULES
 from fwunit import types
 from nose.tools import eq_
@@ -30,7 +30,7 @@ def setup_module():
     json.dump({'rules': types.to_jsonable(TEST_RULES)},
               open('test_source.json', 'w'))
     shutil.copy(os.path.join(dir, 'test_source.json'), '/tmp/foo.json')
-    rules = Rules('test_source')
+    rules = TestContext('test_source')
 
 def teardown_module():
     global old_cwd

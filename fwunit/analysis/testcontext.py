@@ -22,7 +22,7 @@ def _ipset(ip):
         ip = IPSet([ip])
     return ip
 
-class Rules(object):
+class TestContext(object):
     def __init__(self, source):
         if not os.path.exists('fwunit.yaml'):
             raise RuntimeError('Tests must be run from the directory containing `fwunit.yaml`')

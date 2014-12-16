@@ -13,10 +13,10 @@ The following might be in a file named `test_puppet.py`.
 
 .. code-block:: python
 
-    from fwunit.tests import Rules
+    from fwunit import TestContext
     from fwunit.ip import IP, IPSet
 
-    rules = Rules('my-network')
+    rules = TestContext('my-network')
 
     # hosts
 
@@ -63,11 +63,11 @@ It's safe to do this individually in each test script, as the results are cached
 
 .. code-block:: python
 
-    from fwunit.tests import Rules
+    from fwunit import TestContext
 
-    rules = Rules('source-name')
+    rules = TestContext('source-name')
 
-The ``Rules`` class uses ``fwunit.yaml`` in the current directory to look up the proper source file for the given source name.
+The :py:class:`~fwunit.analysis.testcontext.TestContext` class uses ``fwunit.yaml`` in the current directory to look up the proper source file for the given source name.
 
 IPs and IPSets
 --------------
@@ -107,10 +107,10 @@ Once you have the rules loaded, you can start writing test methods::
 Utility Methods
 ---------------
 
-The :class:`~fwunit.tests.Rules` class provides a number of useful functions for testing.
+The :class:`~fwunit.analysis.testcontext.TestContext` class provides a number of useful functions for testing.
 Each method logs verbosely, so test failures should have plenty of data for debugging.
 
-.. py:class:: funit.tests.Rules(source_name)
+.. py:class:: funit.analysis.testcontext.TestContext(source_name)
 
     :param source_name: fwunit source from which to load rules
 
