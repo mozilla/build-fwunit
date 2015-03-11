@@ -3,13 +3,12 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import logging
-import json
-import yaml
 import os
 import itertools
 from fwunit.ip import IP, IPSet, IPPairs
 from nose.tools import ok_
-from fwunit import types
+from fwunit.analysis import config
+from fwunit.analysis import sources
 from blessings import Terminal
 
 log = logging.getLogger(__name__)
@@ -26,9 +25,9 @@ class TestContext(object):
     def __init__(self, source):
         if not os.path.exists('fwunit.yaml'):
             raise RuntimeError('Tests must be run from the directory containing `fwunit.yaml`')
-        cfg = yaml.load(open('fwunit.yaml'))
-        src_cfg = cfg[source]
-        self.rules = types.from_jsonable(json.load(open(src_cfg['output']))['rules'])
+        cfg = config.load_config('fwunit.yaml')
+        self.source = sources.load_source(cfg, source)
+        self.rules = self.source.rules
 
     def _rules_for_app(self, app):
         # get the rules for the given app, or if no such app is known, for @@other

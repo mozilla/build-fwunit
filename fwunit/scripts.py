@@ -6,11 +6,11 @@ import argparse
 import logging
 import sys
 import textwrap
-import yaml
 import os
 import os.path
 from fwunit import log
 from fwunit import types
+from fwunit.analysis import config
 import pkg_resources
 import json
 
@@ -20,12 +20,7 @@ logger = logging.getLogger(__name__)
 def _setup(parser):
     args = parser.parse_args(sys.argv[1:])
     log.setup(args.verbose)
-    cfg = yaml.load(open(args.config_file))
-
-    # chdir to cfg file so rel paths work
-    config_dir = os.path.dirname(os.path.abspath(args.config_file))
-    os.chdir(config_dir)
-
+    cfg = config.load_config(args.config_file)
     return args, cfg
 
 def main():
