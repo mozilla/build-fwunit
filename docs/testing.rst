@@ -16,7 +16,7 @@ The following might be in a file named `test_puppet.py`.
     from fwunit import TestContext
     from fwunit.ip import IP, IPSet
 
-    rules = TestContext('my-network')
+    tc = TestContext('my-network')
 
     # hosts
 
@@ -37,17 +37,17 @@ The following might be in a file named `test_puppet.py`.
     def test_puppetmaster_access():
         """The entire internal_network can access the puppet masters."""
         for app in 'puppet', 'http', 'https':
-            fw1.assertPermits(internal_network, puppetmasters, app)
+            tc.assertPermits(internal_network, puppetmasters, app)
 
     def test_puppetmaster_no_other_apps():
         """Access to puppetmasters is limited to puppet, http, and https"""
-        fw1.assertAllApps(IPSet([IP('0.0.0.0/0')]), puppetmasters,
+        tc.assertAllApps(IPSet([IP('0.0.0.0/0')]), puppetmasters,
                           ['puppet', 'http', 'https'])
 
     def test_puppetmaster_limited():
         """The exteernal networks cannot access the puppet masters."""
         for app in 'puppet', 'http', 'https':
-            fw1.assertDenies(external_network, puppetmasters, app)
+            tc.assertDenies(external_network, puppetmasters, app)
 
 Running this test is as simple as
 
@@ -65,7 +65,7 @@ It's safe to do this individually in each test script, as the results are cached
 
     from fwunit import TestContext
 
-    rules = TestContext('source-name')
+    tc = TestContext('source-name')
 
 The :py:class:`~fwunit.analysis.testcontext.TestContext` class uses ``fwunit.yaml`` in the current directory to look up the proper source file for the given source name.
 
@@ -102,7 +102,7 @@ Once you have the rules loaded, you can start writing test methods::
 
     def test_puppetmaster_access():
         for app in 'puppet', 'http', 'https':
-            fw1.assertPermits(internal_network, puppetmasters, app)
+            tc.assertPermits(internal_network, puppetmasters, app)
 
 Utility Methods
 ---------------
