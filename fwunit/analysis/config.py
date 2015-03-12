@@ -8,10 +8,6 @@ import yaml
 _loaded_config = None
 
 def load_config(filename="fwunit.yaml"):
-    """Load the config, which is stored persistently for the duration of the
-    process.  As a side-effect, this chdir's to the configuration directory.
-    This function can be called multiple times with the same configuration
-    filename."""
     global _loaded_config
     if _loaded_config:
         if _loaded_config[0] != filename:

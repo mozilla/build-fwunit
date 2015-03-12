@@ -21,10 +21,6 @@ def _ipset(ip):
     return ip
 
 class Source(object):
-    """The data from a particular source in fwunit.yaml, along with some analysis methods."""
-
-    # TODO: document these changes
-
     def __init__(self, filename):
         self.rules = types.from_jsonable(json.load(open(filename))['rules'])
 
