@@ -23,7 +23,6 @@ def _ipset(ip):
 class Source(object):
     """The data from a particular source in fwunit.yaml, along with some analysis methods."""
 
-    # TODO: refactor queries to use these
     # TODO: document these changes
 
     def __init__(self, filename):
