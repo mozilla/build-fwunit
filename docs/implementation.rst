@@ -7,7 +7,7 @@ IP Objects
 This tool uses `IPy <https://pypi.python.org/pypi/IPy/>`_ to handle IP addresses, ranges, and sets.
 However, it extends that functionality to include some additional methods for ``IPSet``\s as well as an ``IPPairs`` class to efficiently represent sets of IP pairs.
 
-All of these classes can be imported from ``fwunit.ip``.
+All of these classes can be imported directly from ``fwunit``.
 
 Rules
 -----
