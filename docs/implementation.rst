@@ -69,6 +69,12 @@ Using Source Objects
 
     The data from a particular source in ``fwunit.yaml``, along with some analysis methods.
 
+    .. py:method:: rulesForApp(app):
+        :param app: application name
+        :returns: list of rules
+
+        Get the rules for the given app, or if no such app is known, for ``@@other``.
+
     .. py:method:: rulesDeny(src, dst, apps)
 
         :param src: source IPs
