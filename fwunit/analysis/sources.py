@@ -126,3 +126,9 @@ def load_source(cfg, source):
     if source not in _cache:
         _cache[source] = Source(cfg[source]['output'])
     return _cache[source]
+
+
+def _clear():
+    # for tests only
+    global _cache
+    _cache = {}

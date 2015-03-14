@@ -20,3 +20,9 @@ def load_config(filename="fwunit.yaml"):
 
     _loaded_config = (filename, yaml.load(open(filename)))
     return _loaded_config[1]
+
+
+def _clear():
+    # for tests only
+    global _loaded_config
+    _loaded_config = None
