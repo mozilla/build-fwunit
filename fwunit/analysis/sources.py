@@ -4,6 +4,7 @@
 
 import itertools
 import json
+import os.path
 import logging
 
 from blessings import Terminal
@@ -121,9 +122,16 @@ _cache = {}
 
 def load_source(cfg, source):
     """Load the named source.  Sources are cached, so multiple calls with the same name
-    will not repeatedly re-load the data from disk."""
+    will not repeatedly re-load the data from disk.  The source can name a source from
+    the configuration, or a filename."""
     if source not in _cache:
-        _cache[source] = Source(cfg[source]['output'])
+        if source in cfg:
+            filename = cfg[source]['output']
+        elif os.path.exists(source):
+            filename = source
+        else:
+            raise KeyError("unknown source {}".format(source))
+        _cache[source] = Source(filename)
     return _cache[source]
 
 
