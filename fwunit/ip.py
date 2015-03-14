@@ -106,15 +106,22 @@ class IPPairs(object):
     def __sub__(self, other):
         new_pairs = []
         empty = lambda pair: len(pair[0]) == 0 or len(pair[1]) == 0
-        for sa, da in self._pairs:
+        # the approach here is to successively break pairs in self down where they overlap
+        # other, keeping only pairs that are completely disjoint with other.
+        pairs_to_consider = self._pairs[:]
+        while pairs_to_consider:
+            sa, da = pairs_to_consider.pop(0)
             for sb, db in other._pairs:
                 # eliminate non-overlap
                 if sa.isdisjoint(sb) or da.isdisjoint(db):
-                    new_pairs.append((sa, da))
                     continue
                 for pair in (sa & sb, da - db), (sa - sb, da - db), (sa - sb, da & db):
                     if not empty(pair):
-                        new_pairs.append(pair)
+                        pairs_to_consider.append(pair)
+                break
+            else:
+                # no pairs in `other` overlapped sa/da, so we can keep it
+                new_pairs.append((sa, da))
         return IPPairs(*new_pairs)
 
     def _optimize(self):
