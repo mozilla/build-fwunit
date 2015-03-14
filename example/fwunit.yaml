@@ -9,3 +9,10 @@ my-network:
     application-map:
         22/tcp: ssh
         8140/tcp: puppet
+
+other-network:
+    type: srx
+    output: other-network.json
+    firewall: fw.exmaple.com
+    ssh_username: fwunit
+    ssh_password: sekr!t
