@@ -1,5 +1,5 @@
 from fwunit import TestContext
-from fwunit.ip import IP, IPSet
+from fwunit import IP, IPSet
 
 rules = TestContext('my-network')
 

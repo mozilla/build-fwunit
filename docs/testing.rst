@@ -14,7 +14,7 @@ The following might be in a file named `test_puppet.py`.
 .. code-block:: python
 
     from fwunit import TestContext
-    from fwunit.ip import IP, IPSet
+    from fwunit import IP, IPSet
 
     tc = TestContext('my-network')
 
@@ -76,14 +76,14 @@ The ``IP`` and ``IPSet`` classes come from `IPy <https://pypi.python.org/pypi/IP
 
 The ``IP`` class represents a single IP or CIDR range::
 
-    from fwunit.ip import IP
+    from fwunit import IP
     server = IP('10.11.12.33')
     subnet = IP('10.11.12.0/23')
 
 When you need to reason about a non-contiguous set of addresses, you need an ``IPSet``.
 This is really just a list of ``IP`` instances, but it will remove duplicates, collapse adjacent IPs, and so on. ::
 
-    from fwunit.ip import IP, IPSet
+    from fwunit import IP, IPSet
     db_subnets = IPSet([IP('10.11.12.0/23'), IP('10.12.12.0/23')])
 
 In general, tests expeect ``IPSet``\s, but you can pass ``IP`` instances or even bare strings and they will be converted appropriately.
