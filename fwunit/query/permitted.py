@@ -3,8 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import sys
-from .. import tests
 from . import base
+from fwunit.analysis import sources
 from blessings import Terminal
 
 class PermittedQuery(base.Query):
@@ -30,13 +30,11 @@ class PermittedQuery(base.Query):
 
     def run(self, args, cfg):
         terminal = Terminal()
-        rules = tests.Rules(args.source)
-        try:
-            rules.assertPermits(args.src_ip, args.dst_ip, args.app)
-        except AssertionError:
+        src = sources.load_source(cfg, args.source)
+        if src.rulesPermit(args.src_ip, args.dst_ip, args.app):
+            if not args.quiet:
+                print terminal.black_on_green("Flow permitted")
+        else:
             if not args.quiet:
                 print terminal.black_on_red("Flow not permitted")
             sys.exit(1)
-        else:
-            if not args.quiet:
-                print terminal.black_on_green("Flow permitted")

@@ -8,6 +8,8 @@ import yaml
 import json
 import os
 from fwunit.test.util import ipset
+from fwunit.analysis import config
+from fwunit.analysis import sources
 from fwunit.analysis.testcontext import TestContext
 from fwunit.test.util.test_rules import TEST_RULES
 from fwunit import types
@@ -18,6 +20,8 @@ old_cwd = None
 rules = None
 
 def setup_module():
+    config._clear()
+    sources._clear()
     global dir, old_cwd, rules
     dir = tempfile.mkdtemp()
     old_cwd = os.getcwd()

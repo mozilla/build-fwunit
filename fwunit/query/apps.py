@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from .. import tests
+from fwunit.analysis import sources
 from . import base
 
 class AppsQuery(base.Query):
@@ -23,6 +23,6 @@ class AppsQuery(base.Query):
         super(AppsQuery, self).__init__(subparser)
 
     def run(self, args, cfg):
-        rules = tests.Rules(args.source)
-        for app in sorted(rules.allApps(args.src_ip, args.dst_ip)):
+        src = sources.load_source(cfg, args.source)
+        for app in sorted(src.allApps(args.src_ip, args.dst_ip)):
             print app
