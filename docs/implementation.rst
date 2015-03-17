@@ -72,6 +72,7 @@ Using Source Objects
     The data from a particular source in ``fwunit.yaml``, along with some analysis methods.
 
     .. py:method:: rulesForApp(app):
+
         :param app: application name
         :returns: list of rules
 
