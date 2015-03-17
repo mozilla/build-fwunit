@@ -24,5 +24,6 @@ Contents
    processing
    policy_types
    querying
+   diffing
    testing
    implementation

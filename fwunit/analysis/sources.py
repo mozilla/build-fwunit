@@ -4,6 +4,7 @@
 
 import itertools
 import json
+import os.path
 import logging
 
 from blessings import Terminal
@@ -24,8 +25,7 @@ class Source(object):
     def __init__(self, filename):
         self.rules = types.from_jsonable(json.load(open(filename))['rules'])
 
-    def _rules_for_app(self, app):
-        # get the rules for the given app, or if no such app is known, for @@other
+    def rulesForApp(self, app):
         try:
             return self.rules[app]
         except KeyError:
@@ -39,7 +39,7 @@ class Source(object):
         apps = apps if not isinstance(apps, basestring) else [apps]
         for app in apps:
             log.info("checking application %r" % app)
-            for rule in self._rules_for_app(app):
+            for rule in self.rulesForApp(app):
                 src_matches = (rule.src & src)
                 if not src_matches:
                     continue
@@ -65,7 +65,7 @@ class Source(object):
         apps = apps if not isinstance(apps, basestring) else [apps]
         for app in apps:
             log.info("checking application %r" % app)
-            for rule in self._rules_for_app(app):
+            for rule in self.rulesForApp(app):
                 if (rule.src & src) and (rule.dst & dst):
                     log.info("matched policy {t.cyan}{name}{t.normal}\n{t.yellow}{src}{t.normal} "
                             "-> {t.magenta}{dst}{t.normal}".format(
@@ -105,7 +105,7 @@ class Source(object):
         dst = _ipset(dst)
         log.info("sourcesFor(%r, %r, ignore_sources=%r)" % (dst, app, ignore_sources))
         rv = IPSet()
-        for rule in self._rules_for_app(app):
+        for rule in self.rulesForApp(app):
             if rule.dst & dst:
                 src = rule.src
                 if ignore_sources:
@@ -122,9 +122,16 @@ _cache = {}
 
 def load_source(cfg, source):
     """Load the named source.  Sources are cached, so multiple calls with the same name
-    will not repeatedly re-load the data from disk."""
+    will not repeatedly re-load the data from disk.  The source can name a source from
+    the configuration, or a filename."""
     if source not in _cache:
-        _cache[source] = Source(cfg[source]['output'])
+        if source in cfg:
+            filename = cfg[source]['output']
+        elif os.path.exists(source):
+            filename = source
+        else:
+            raise KeyError("unknown source {}".format(source))
+        _cache[source] = Source(filename)
     return _cache[source]
 
 

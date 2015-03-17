@@ -82,3 +82,13 @@ def test_ippairs():
         IPPairs((ten, ten - ten26), (ten - ten26, ten26)))
         # TODO: equivalent to, but doesn't compare equal to:
         #  IPPairs((ten - ten26, ten), (ten26, ten - ten26)))
+
+def test_ippairs_sub_empty():
+    ten = IPSet([IP('10.0.0.0/8')])
+    twenty = IPSet([IP('20.0.0.0/8')])
+    for pairs in [
+            IPPairs(),
+            IPPairs((ten, twenty)),
+            IPPairs((ten, twenty), (twenty, ten)),
+        ]:
+        eq_(pairs - IPPairs(), pairs)

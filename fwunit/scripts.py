@@ -6,8 +6,7 @@ import argparse
 import logging
 import sys
 import textwrap
-import os
-import os.path
+from fwunit import diff as diff_module
 from fwunit import log
 from fwunit import types
 from fwunit.analysis import config
@@ -112,3 +111,19 @@ def query():
         parser.error("No subcomand given")
 
     args._func(args, cfg)
+
+def diff():
+    description = textwrap.dedent("""Print differences between two rule sets (sources)""")
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('--config', '-c',
+        help="YAML configuration file", dest='config_file', type=str, default='fwunit.yaml')
+    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--quiet', action='store_true')
+    parser.add_argument('left', help='left source')
+    parser.add_argument('right', help='right source')
+
+    args, cfg = _setup(parser)
+    if not args.verbose:
+        logging.getLogger('').setLevel(logging.CRITICAL)
+
+    diff_module.show_diff(cfg, args.left, args.right)

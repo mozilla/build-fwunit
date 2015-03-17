@@ -60,6 +60,8 @@ With the config object in hand, call :py:func:`~fwunit.analysis.sources.load_sou
     :rtype: :py:class:`~fwunit.analysis.sources.Source`
 
     Load the ruleset for the given source.
+    The ``source`` parameter can be a source name from the configuration, or a filename.
+
     Rulesets are cached globally to the process.
 
 Using Source Objects
@@ -68,6 +70,12 @@ Using Source Objects
 .. py:class:: fwunit.analysis.sources.Source
 
     The data from a particular source in ``fwunit.yaml``, along with some analysis methods.
+
+    .. py:method:: rulesForApp(app):
+        :param app: application name
+        :returns: list of rules
+
+        Get the rules for the given app, or if no such app is known, for ``@@other``.
 
     .. py:method:: rulesDeny(src, dst, apps)
 
