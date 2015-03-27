@@ -34,7 +34,7 @@ class Source(object):
     def rulesDeny(self, src, dst, apps):
         src = _ipset(src)
         dst = _ipset(dst)
-        log.info("rulesDeny(%r, %r, %r)" % (src, dst, apps))
+        log.info("rulesDeny(%s, %s, %r)" % (src, dst, apps))
         failures = 0
         apps = apps if not isinstance(apps, basestring) else [apps]
         for app in apps:
@@ -60,7 +60,7 @@ class Source(object):
     def rulesPermit(self, src, dst, apps):
         src = _ipset(src)
         dst = _ipset(dst)
-        log.info("rulesPermit(%r, %r, %r)" % (src, dst, apps))
+        log.info("rulesPermit(%s, %s, %r)" % (src, dst, apps))
         remaining = IPPairs((src, dst))
         apps = apps if not isinstance(apps, basestring) else [apps]
         for app in apps:
@@ -82,7 +82,7 @@ class Source(object):
     def allApps(self, src, dst, debug=False):
         src = _ipset(src)
         dst = _ipset(dst)
-        log.info("allApps(%r, %r)" % (src, dst))
+        log.info("allApps(%s, %s)" % (src, dst))
         rv = set()
         for rule in itertools.chain(*self.rules.itervalues()):
             if not debug and rule.app in rv:
@@ -103,7 +103,7 @@ class Source(object):
 
     def sourcesFor(self, dst, app, ignore_sources=None):
         dst = _ipset(dst)
-        log.info("sourcesFor(%r, %r, ignore_sources=%r)" % (dst, app, ignore_sources))
+        log.info("sourcesFor(%s, %r, ignore_sources=%s)" % (dst, app, ignore_sources))
         rv = IPSet()
         for rule in self.rulesForApp(app):
             if rule.dst & dst:
