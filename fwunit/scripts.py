@@ -12,6 +12,10 @@ from fwunit import types
 from fwunit.analysis import config
 import pkg_resources
 import json
+import prettyip
+
+# always use prettyip to print IPSets
+prettyip.patch_ipy()
 
 logger = logging.getLogger(__name__)
 

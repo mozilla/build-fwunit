@@ -22,6 +22,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     install_requires=[
         "IPy",
+        "prettyip",
         "nose",
         "blessings",
         "PyYAML",
