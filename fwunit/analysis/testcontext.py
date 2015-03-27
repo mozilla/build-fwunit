@@ -8,6 +8,10 @@ from nose.tools import ok_
 from fwunit.analysis import config
 from fwunit.analysis import sources
 from blessings import Terminal
+import prettyip
+
+# patch IPy's IPSet representation
+prettyip.patch_ipy()
 
 log = logging.getLogger(__name__)
 terminal = Terminal()
