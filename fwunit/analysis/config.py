@@ -12,7 +12,7 @@ def load_config(filename="fwunit.yaml"):
     if _loaded_config:
         if _loaded_config[0] != filename:
             raise RuntimeError("load_config already called with %r" % (_loaded_config[0],))
-        return
+        return _loaded_config[1]
 
     # chdir to cfg file so rel paths work
     config_dir = os.path.dirname(os.path.abspath(filename))
