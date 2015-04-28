@@ -20,8 +20,10 @@ def policies_to_rules(app_map, firewall):
     attached_networks = process_attached_networks(firewall.routes)
     policies_by_zone_pair = process_attached_network_policies(
         policies_by_zone_pair, zone_nets, attached_networks)
+    addrbooks_per_zone, global_addrbook = process_address_books_per_zone(
+        firewall.zones, firewall.address_books)
     src_per_policy, dst_per_policy = process_address_sets_per_policy(
-        firewall.zones, policies_by_zone_pair)
+        firewall.zones, policies_by_zone_pair, addrbooks_per_zone, global_addrbook)
     return process_rules(app_map, firewall.policies, zone_nets,
                          policies_by_zone_pair, src_per_policy,
                          dst_per_policy)
@@ -89,7 +91,7 @@ def process_attached_network_policies(policies_by_zone_pair, zone_nets, attached
     # since such traffic will flow within that network and not through the
     # firewall.
     for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
-        if from_zone != to_zone:
+        if from_zone is None or from_zone != to_zone:
             continue
         zone_net = zone_nets[from_zone]
         for att in attached_networks:
@@ -112,15 +114,55 @@ def process_attached_network_policies(policies_by_zone_pair, zone_nets, attached
     return policies_by_zone_pair
 
 
-def process_address_sets_per_policy(zones, policies_by_zone_pair):
+def process_address_books_per_zone(zones, address_books):
+    # Juniper has three types of address books:
+    # - zone address books (embedded in the zone)
+    # - named address books ("attached" to zones)
+    # - global address book (implicit in all zones)
+    # Juniper actually only allows two to be in use on a single system, but
+    # for simplicity we handle all three.  The precedence is as given above.
+    # XXX: note that address-sets are resolved when parsing; this may not
+    # be an accurate representation of how addresses are resolved
+    logger.info("compiling address books per zone")
+    by_zone = {}
+
+    # apply zone address books
+    for zone in zones:
+        by_zone[zone.name] = [zone.addresses]
+
+    # apply attached address books
+    global_addrbook = {}
+    for addrbook in address_books:
+        if addrbook.name == 'global':
+            global_addrbook = addrbook.addresses
+            continue
+        for zone in addrbook.attaches:
+            by_zone[zone].append(addrbook.addresses)
+
+    # apply the global book, if we found one
+    if global_addrbook:
+        for bz in by_zone.itervalues():
+            bz.append(global_addrbook)
+
+    # now flatten each into a single dictionary
+    flattened_by_zone = {}
+    for zone, books in by_zone.iteritems():
+        flattened = {}
+        for addrs in reversed(books):
+            flattened.update(addrs)
+        flattened_by_zone[zone] = flattened
+
+    return flattened_by_zone, global_addrbook
+
+def process_address_sets_per_policy(zones, policies_by_zone_pair,
+                                    addrbooks_per_zone, global_addrbook):
     logger.info("computing address sets per policy")
     src_per_policy = {}
     dst_per_policy = {}
-    zones_by_name = dict((z.name, z) for z in zones)
     for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
-        from_addrbook = zones_by_name[from_zone].addresses
+        from_addrbook = addrbooks_per_zone.get(from_zone, global_addrbook)
         get_from = lambda a: a if isinstance(a, IPSet) else from_addrbook[a]
-        to_addrbook = zones_by_name[to_zone].addresses
+        to_addrbook = addrbooks_per_zone.get(to_zone, global_addrbook)
         get_to = lambda a: a if isinstance(a, IPSet) else to_addrbook[a]
         for pol in zpolicies:
             src_per_policy[pol] = sum(
@@ -143,10 +185,14 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
     all_apps = set(itertools.chain(*[p.applications for p in policies]))
     all_apps = all_apps | set(app_map.keys())
     all_apps.discard('any')
-    for (from_zone, to_zone), zpolicies in policies_by_zone_pair.iteritems():
-        logger.debug(" from-zone %s to-zone %s (%d policies)", from_zone, to_zone, len(zpolicies))
+    global_policies = policies_by_zone_pair.get((None, None), [])
+    for from_zone, to_zone in itertools.product(zone_nets, zone_nets):
+        zpolicies = sorted(policies_by_zone_pair.get((from_zone, to_zone), []),
+                           key=lambda p: p.sequence)
+        zpolicies += global_policies
+        logger.debug(" from-zone %s to-zone %s (%d policies)", from_zone, to_zone,
+                     len(zpolicies))
         rule_count = 0
-        zpolicies.sort(key=lambda p: p.sequence)
         apps = set(itertools.chain(*[p.applications for p in zpolicies]))
         if 'any' in apps:
             apps = all_apps
@@ -158,7 +204,7 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
             remaining_pairs = IPPairs(
                 (zone_nets[from_zone], zone_nets[to_zone]))
             rules = rules_by_app.setdefault(mapped_app, [])
-            for pol in zpolicies:
+            for pol in zpolicies + global_policies:
                 if app not in pol.applications and 'any' not in pol.applications:
                     continue
                 src = src_per_policy[pol]

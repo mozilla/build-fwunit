@@ -394,15 +394,20 @@ class FakeSRX(object):
             if request == 'security policies global':
                 if 'global' in self.policies:
                     policy_dicts = self.policies['global']
+                    policy_xmls = [policy_tpl % d for d in policy_dicts]
+                    return global_policy_xml % dict(policies='\n'.join(policy_xmls))
                 else:
                     return no_global_policy_xml
             else:
                 request = request.split()
                 from_zone, to_zone = request[3], request[5]
-                policy_dicts = self.policies[from_zone, to_zone]
-            policy_xmls = [policy_tpl % d for d in policy_dicts]
-            return policy_xml % dict(from_zone=from_zone, to_zone=to_zone,
-                                     policies='\n'.join(policy_xmls))
+                try:
+                    policy_dicts = self.policies[from_zone, to_zone]
+                except KeyError:
+                    policy_dicts = []
+                policy_xmls = [policy_tpl % d for d in policy_dicts]
+                return policy_xml % dict(from_zone=from_zone, to_zone=to_zone,
+                                        policies='\n'.join(policy_xmls))
         else:
             raise AssertionError("bad request")
 

@@ -29,7 +29,7 @@ class Policy(object):
         #: policy name
         self.name = None
 
-        #: source zone name for this policy
+        #: source zone name for this policy, or None for the global policy
         self.from_zone = None
 
         #: destination zone name for this policy
@@ -118,6 +118,27 @@ class Route(object):
             return route
 
 
+def _parse_addrbook(addrbook):
+    addresses = {}
+    for addr in addrbook:
+        name = addr.findtext('name')
+        if addr.tag == 'address':
+            ip = IPSet([IP(addr.findtext('ip-prefix'))])
+        else:  # note: assumes address-sets follow addresses
+            ip = IPSet()
+            for setaddr in addr.findall('address'):
+                setname = setaddr.findtext('name')
+                ip += addresses[setname]
+        addresses[name] = ip
+    return addresses
+
+_default_addresses = {
+    'any': IPSet([IP('0.0.0.0/0')]),
+    'any-ipv4': IPSet([IP('0.0.0.0/0')]),
+    # fwunit doesn't handle ipv6, so this is an empty set
+    'any-ipv6': IPSet([]),
+}
+
 class Zone(object):
 
     """Parse out zone names and the corresponding interfaces"""
@@ -127,12 +148,7 @@ class Zone(object):
         self.interfaces = []
 
         #: name -> ipset, based on the zone's address book
-        self.addresses = {
-            'any': IPSet([IP('0.0.0.0/0')]),
-            'any-ipv4': IPSet([IP('0.0.0.0/0')]),
-            # fwunit doesn't handle ipv6, so this is an empty set
-            'any-ipv6': IPSet([]),
-        }
+        self.addresses = _default_addresses.copy()
 
     def __str__(self):
         return "%s on %s" % (self.name, self.interfaces)
@@ -150,17 +166,54 @@ class Zone(object):
         # address book
         addrbook = sze.find('address-book') 
         if addrbook is not None:
-            for addr in addrbook:
-                name = addr.findtext('name')
-                if addr.tag == 'address':
-                    ip = IPSet([IP(addr.findtext('ip-prefix'))])
-                else:  # note: assumes address-sets follow addresses
-                    ip = IPSet()
-                    for setaddr in addr.findall('address'):
-                        setname = setaddr.findtext('name')
-                        ip += zone.addresses[setname]
-                zone.addresses[name] = ip
+            zone.addresses.update(_parse_addrbook(addrbook))
         return zone
+
+
+class AddressBook(object):
+    """Parse named address books"""
+    def __init__(self):
+        #: list of zone names
+        self.attaches = []
+
+        #: name -> ipset, based on the zone's address book
+        self.addresses = _default_addresses.copy()
+
+        #: [name], list of attached zone names
+        self.attaches = []
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def _from_xml(cls, address_book_elt):
+        addrbook = cls()
+        abe = address_book_elt
+        addrbook.name = abe.find('name').text
+
+        # address book
+        for elt in abe:
+            if elt.tag == 'name':
+                addrbook.name = elt.text
+            elif elt.tag == 'address':
+                ip = IPSet([IP(elt.findtext('ip-prefix'))])
+                name = elt.findtext('name')
+                addrbook.addresses[name] = ip
+            elif elt.tag == 'address-set':
+                # note: assumes address-sets follow addresses
+                ip = IPSet()
+                for setaddr in elt.findall('address'):
+                    setname = setaddr.findtext('name')
+                    ip += addrbook.addresses[setname]
+                name = elt.findtext('name')
+                addrbook.addresses[name] = ip
+            elif elt.tag == 'attach':
+                attaches = []
+                for z in elt:
+                    attaches.append(z.findtext('name'))
+                addrbook.attaches = attaches
+
+        return addrbook
 
 
 class Firewall(object):
@@ -176,6 +229,9 @@ class Firewall(object):
 
         #: list of Route instances from 'inet.0'
         self.routes = self._parse_routes(ssh_connection)
+
+        #: list of AddressBook instances
+        self.address_books = self._parse_address_books(ssh_connection)
 
     def _parse_policies(self, ssh_connection):
         policies = []
@@ -203,6 +259,17 @@ class Firewall(object):
                     for pol_elt in elt.findall('./policies/policy-information'):
                         policy = Policy._from_xml(from_zone, to_zone, pol_elt)
                         policies.append(policy)
+
+        # look for global policies
+        log.info("downloading global policy")
+        policies_xml = ssh_connection.show('security policies global')
+        spg = ET.fromstring(policies_xml)
+        elt = spg.find('.//security-context')
+        if elt is not None:
+            for pol_elt in elt.findall('./policies/policy-information'):
+                policy = Policy._from_xml(None, None, pol_elt)
+                policies.append(policy)
+
         return policies
 
     def _parse_routes(self, ssh_connection):
@@ -231,3 +298,14 @@ class Firewall(object):
         for sz in scsze.findall('.//security-zone'):
             zones.append(Zone._from_xml(sz))
         return zones
+
+    def _parse_address_books(self, ssh_connection):
+        log.info("downloading non-zone address books")
+        addrbooks_xml = ssh_connection.show('configuration security address-book')
+
+        log.info("parsing address books")
+        csab = ET.fromstring(addrbooks_xml)
+        address_books = []
+        for ab in csab.findall('.//address-book'):
+            address_books.append(AddressBook._from_xml(ab))
+        return address_books
