@@ -7,8 +7,8 @@ from fwunit.ip import IP, IPSet
 from fwunit.srx import parse
 from nose.tools import eq_
 from fwunit.test.util.srx_xml import route_xml_11_4R6
-from fwunit.test.util.srx_xml import zones_xml
 from fwunit.test.util.srx_xml import zones_empty_xml
+from fwunit.test.util.srx_xml import FakeSRX
 
 
 def parse_xml(xml, elt_path=None):
@@ -19,7 +19,22 @@ def parse_xml(xml, elt_path=None):
 
 
 def test_parse_zones():
-    elt = parse_xml(zones_xml, './/security-zone')
+    f = FakeSRX()
+    z = f.add_zone('untrust')
+    f.add_address(z, 'host1', '9.0.9.1/32')
+    f.add_address(z, 'host2', '9.0.9.2/32')
+    f.add_address(z, 'puppet', '9.0.9.2/32')
+    f.add_address_set(z, 'hosts', 'host1', 'host2')
+    f.add_interface(z, 'reth0')
+
+    z = f.add_zone('trust')
+    f.add_address(z, 'trustedhost', '10.0.9.2/32')
+    f.add_address(z, 'dmz', '10.1.0.0/16')
+    f.add_address(z, 'shadow', '10.1.99.99/32')
+    f.add_interface(z, 'reth1')
+
+    elt = parse_xml(
+        f.fake_show('configuration security zones'), './/security-zone')
     z = parse.Zone._from_xml(elt)
     eq_(z.interfaces, ['reth0'])
     eq_(sorted(z.addresses.keys()),

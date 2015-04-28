@@ -2,7 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-## fake XML results derived from the output of a Juniper SRX
+import mock
+from fwunit.srx import show
+
+# fake XML results derived from the output of a Juniper SRX
 
 route_xml = """\
 <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
@@ -135,71 +138,7 @@ zones_xml = """\
     <configuration junos:commit-seconds="1409696876" junos:commit-localtime="2014-09-02 22:27:56 UTC" junos:commit-user="dcurado">
             <security>
                 <zones>
-                    <security-zone>
-                        <name>untrust</name>
-                        <address-book>
-                            <address>
-                                <name>host1</name>
-                                <ip-prefix>9.0.9.1/32</ip-prefix>
-                            </address>
-                            <address>
-                                <name>host2</name>
-                                <ip-prefix>9.0.9.2/32</ip-prefix>
-                            </address>
-                            <address>
-                                <name>puppet</name>
-                                <ip-prefix>9.0.9.2/32</ip-prefix>
-                            </address>
-                            <address-set>
-                                <name>hosts</name>
-                                <address>
-                                    <name>host1</name>
-                                </address>
-                                <address>
-                                    <name>host2</name>
-                                </address>
-                            </address-set>
-                        </address-book>
-                        <interfaces>
-                            <name>reth0</name>
-                            <host-inbound-traffic>
-                                <system-services>
-                                    <name>ping</name>
-                                </system-services>
-                                <system-services>
-                                    <name>traceroute</name>
-                                </system-services>
-                                <system-services>
-                                    <name>bootp</name>
-                                </system-services>
-                            </host-inbound-traffic>
-                        </interfaces>
-                    </security-zone>
-                    <security-zone>
-                        <name>trust</name>
-                        <address-book>
-                            <address>
-                                <name>trustedhost</name>
-                                <ip-prefix>10.0.9.2/32</ip-prefix>
-                            </address>
-                            <address>
-                                <name>dmz</name>
-                                <ip-prefix>10.1.0.0/16</ip-prefix>
-                            </address>
-                            <address>
-                                <name>shadow</name>
-                                <ip-prefix>10.1.99.99/32</ip-prefix>
-                            </address>
-                        </address-book>
-                        <interfaces>
-                            <name>reth1</name>
-                            <host-inbound-traffic>
-                                <system-services>
-                                    <name>ping</name>
-                                </system-services>
-                            </host-inbound-traffic>
-                        </interfaces>
-                    </security-zone>
+%(zones)s
                 </zones>
             </security>
     </configuration>
@@ -207,6 +146,84 @@ zones_xml = """\
         <banner>{primary:node1}</banner>
     </cli>
 </rpc-reply>
+"""
+
+zone_tpl = """\
+        <security-zone>
+            <name>%(name)s</name>
+            <address-book>
+%(addresses)s
+%(address_sets)s
+            </address-book>
+            <interfaces>
+%(interfaces)s
+            </interfaces>
+        </security-zone>
+"""
+
+address_tpl = """\
+        <address>
+            <name>%(name)s</name>
+            <ip-prefix>%(prefix)s</ip-prefix>
+        </address>
+"""
+
+address_set_tpl = """\
+        <address-set>
+            <name>%(name)s</name>
+%(addresses)s
+        </address-set>
+"""
+
+address_set_elt_tpl = """\
+        <address>
+            <name>%(name)s</name>
+        </address>
+"""
+
+interface_tpl = """\
+        <interfaces>
+            <name>%(name)s</name>
+            <host-inbound-traffic>
+                <system-services>
+                    <name>ping</name>
+                </system-services>
+            </host-inbound-traffic>
+        </interfaces>
+"""
+
+addrbooks_xml = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <configuration junos:commit-seconds="1430170546" junos:commit-localtime="2015-04-27 21:35:46 UTC" junos:commit-user="root">
+            <security>
+%(addrbooks)s
+            </security>
+    </configuration>
+    <cli>
+        <banner></banner>
+    </cli>
+</rpc-reply>
+"""
+
+addrbook_tpl = """\
+        <address-book>
+            <name>%(name)s</name>
+%(addresses)s
+%(address_sets)s
+%(attaches)s
+        </address-book>
+"""
+
+addrbook_attaches_tpl = """\
+        <attach>
+%(attaches)s
+        </attach>
+"""
+
+addrbook_attach_tpl = """\
+        <zone>
+            <name>%(name)s</name>
+        </zone>
 """
 
 zones_empty_xml = """\
@@ -251,6 +268,34 @@ policy_xml = """\
 </rpc-reply>
 """
 
+no_global_policy_xml = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <security-policies junos:style="brief">
+    </security-policies>
+    <cli>
+        <banner></banner>
+    </cli>
+</rpc-reply>
+"""
+
+global_policy_xml = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <security-policies junos:style="brief">
+        <security-context>
+            <context-information>
+                <global-context/>
+            </context-information>
+            <policies>
+%(policies)s
+            </policies>
+        </security-context>
+    </security-policies>
+    <cli>
+        <banner></banner>
+    </cli>
+</rpc-reply>
+"""
+
 policy_tpl = """
     <policy-information>
         <policy-name>%(name)s</policy-name>
@@ -284,3 +329,115 @@ policy_tpl = """
         <policy-application-services></policy-application-services>
     </policy-information>
 """
+
+# set up to produce fake XML output from the firewall
+
+
+class FakeSRX(object):
+
+    def __init__(self):
+        self.policies = {}
+        self.zones = {}
+        self.address_books = {}
+
+    def fake_show(self, request):
+        if request == 'route':
+            return route_xml
+        elif request == 'configuration security address-book':
+            addrbook_xmls = []
+            for ab_name, info in self.address_books.iteritems():
+                addresses = [address_tpl % addr
+                             for addr in info['addresses']]
+                addresses = '\n'.join(addresses)
+                address_sets = []
+                for addrset in info['address-sets']:
+                    elts = [address_set_elt_tpl % dict(name=name)
+                            for name in addrset[1]]
+                    address_sets.append(
+                        address_set_tpl % dict(name=addrset[0],
+                                               addresses='\n'.join(elts)))
+                address_sets = '\n'.join(address_sets)
+                if info['attach']:
+                    attaches = [addrbook_attach_tpl % dict(name=name)
+                                for name in info['attach']]
+                    attaches = '\n'.join(attaches)
+                    attaches = addrbook_attaches_tpl % dict(attaches=attaches)
+                else:
+                    attaches = ''
+                addrbook_xmls.append(addrbook_tpl % dict(
+                    name=ab_name, addresses=addresses, address_sets=address_sets,
+                    attaches=attaches))
+            return addrbooks_xml % dict(addrbooks='\n'.join(addrbook_xmls))
+        elif request == 'configuration security zones':
+            zone_xmls = []
+            for zone_name, info in self.zones.iteritems():
+                addresses = [address_tpl % addr
+                             for addr in info['addresses']]
+                addresses = '\n'.join(addresses)
+                address_sets = []
+                for addrset in info['address-sets']:
+                    elts = [address_set_elt_tpl % dict(name=name)
+                            for name in addrset[1]]
+                    address_sets.append(
+                        address_set_tpl % dict(name=addrset[0],
+                                               addresses='\n'.join(elts)))
+                address_sets = '\n'.join(address_sets)
+                interfaces = [interface_tpl % dict(name=name)
+                              for name in info['interfaces']]
+                interfaces = '\n'.join(interfaces)
+                zone_xmls.append(zone_tpl % dict(
+                    name=zone_name, addresses=addresses,
+                    address_sets=address_sets,
+                    interfaces=interfaces))
+            return zones_xml % dict(zones='\n'.join(zone_xmls))
+        elif request.startswith('security policies'):
+            if request == 'security policies global':
+                if 'global' in self.policies:
+                    policy_dicts = self.policies['global']
+                else:
+                    return no_global_policy_xml
+            else:
+                request = request.split()
+                from_zone, to_zone = request[3], request[5]
+                policy_dicts = self.policies[from_zone, to_zone]
+            policy_xmls = [policy_tpl % d for d in policy_dicts]
+            return policy_xml % dict(from_zone=from_zone, to_zone=to_zone,
+                                     policies='\n'.join(policy_xmls))
+        else:
+            raise AssertionError("bad request")
+
+    def install(self):
+        self.conn_patch = mock.patch(
+            'fwunit.srx.show.Connection', spec=show.Connection)
+        m = self.conn_patch.start()
+        m().show.side_effect = self.fake_show
+
+    def uninstall(self):
+        self.conn_patch.stop()
+
+    def add_zone(self, name):
+        z = {'addresses': [], 'address-sets': [], 'interfaces': []}
+        self.zones[name] = z
+        return z
+
+    def add_addrbook(self, name):
+        addrbook = {'addresses': [], 'address-sets': [], 'attach': []}
+        self.address_books[name] = addrbook
+        return addrbook
+
+    def add_attach(self, addrbook, zone_name):
+        addrbook['attach'].append(zone_name)
+
+    def add_address(self, container, name, prefix):
+        # container can be a zone or addrbook
+        container['addresses'].append({'name': name, 'prefix': prefix})
+
+    def add_address_set(self, container, name, *names):
+        # container can be a zone or addrbook
+        container['address-sets'].append((name, list(names)))
+
+    def add_interface(self, z, name):
+        z['interfaces'].append(name)
+
+    def add_policy(self, name, policy):
+        self.policies.setdefault(name, []).append(policy)
