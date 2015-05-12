@@ -84,6 +84,37 @@ route_xml = """\
 </rpc-reply>
 """
 
+route_xml_blackhole = """\
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X44/junos">
+    <route-information xmlns="http://xml.juniper.net/junos/12.1X44/junos-routing">
+        <!-- keepalive -->
+        <route-table>
+            <table-name>inet.0</table-name>
+            <destination-count>273</destination-count>
+            <total-route-count>410</total-route-count>
+            <active-route-count>273</active-route-count>
+            <holddown-route-count>0</holddown-route-count>
+            <hidden-route-count>0</hidden-route-count>
+            <rt junos:style="brief">
+                <rt-destination>20.0.0.0/8</rt-destination>
+                <rt-entry>
+                    <active-tag>*</active-tag>
+                    <current-active/>
+                    <last-active/>
+                    <protocol-name>Aggregate</protocol-name>
+                    <preference>130</preference>
+                    <age junos:seconds="33111187">54w5d 05:33:07</age>
+                    <nh-type>Reject</nh-type>
+                </rt-entry>
+            </rt>
+        </route-table>
+    </route-information>
+    <cli>
+        <banner>{primary:node1}</banner>
+    </cli>
+</rpc-reply>
+"""
+
 route_xml_11_4R6 = """\
 <rpc-reply xmlns:junos="http://xml.juniper.net/junos/11.4R6/junos">
     <route-information xmlns="http://xml.juniper.net/junos/11.4R6/junos-routing">
