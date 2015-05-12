@@ -8,6 +8,7 @@ from fwunit.srx import process
 from fwunit.common import ApplicationMap
 from fwunit.test.util import ipset
 from fwunit.types import Rule
+from fwunit import IP
 
 APP_MAP = ApplicationMap(dict(application_map={'junos-ssh': 'ssh'}))
 ZONE_NETS = {
@@ -95,3 +96,37 @@ def test_process_rules_any_app():
     }
     [ruleset.sort() for ruleset in exp.itervalues()]
     eq_(res, exp)
+
+
+def mkroute(**kwargs):
+    kwargs['destination'] = IP(kwargs['destination'])
+    kwargs.setdefault('is_local', False)
+    rt = parse.Route()
+    for k, v in kwargs.iteritems():
+        setattr(rt, k, v)
+    return rt
+
+
+def test_process_interface_ips():
+    routes = [
+        # reth2 is the route to the Internet
+        mkroute(destination="0.0.0.0/0", interface='reth2'),
+        # reth1 is the gateway to the rest of the private space
+        mkroute(destination="10.0.0.0/8", interface='reth1'),
+        # reth7 is the peer link to some other private /16's
+        mkroute(destination="10.128.0.0/16", interface='reth7'),
+        mkroute(destination="10.130.0.0/15", interface='reth7'),
+        # 10.129.0.0/16 is ours, but has only one active subnet,
+        # with the rest blackholed
+        mkroute(destination="10.129.0.0/16", reject=True),
+        mkroute(destination="10.129.210.0/24",
+                interface='reth0.210', is_local=True),
+    ]
+    interface_ips = process.process_interface_ips(routes)
+    exp = {
+        'reth0.210': ipset('10.129.210.0/24'),
+        'reth1': ipset('10.0.0.0/8') - ipset('10.128.0.0/14'), # 10.{128-131}
+        'reth2': ipset('0.0.0.0/0') - ipset('10.0.0.0/8'),
+        'reth7': ipset('10.128.0.0/16') + ipset('10.130.0.0/15'),
+    }
+    eq_(interface_ips, exp)
