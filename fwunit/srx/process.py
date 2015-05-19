@@ -40,11 +40,12 @@ def process_interface_ips(routes):
     matched = IPSet()
     interface_ips = {}
     for r in routes:
-        if not r.interface:
-            continue
         destset = IPSet([r.destination])
-        interface_ips[r.interface] = interface_ips.get(
-            r.interface, IPSet()) + (destset - matched)
+        if r.interface and not r.reject:
+            interface_ips[r.interface] = interface_ips.get(
+                r.interface, IPSet()) + (destset - matched)
+        # consider the route matched even if it didn't have an
+        # interface or is a blackhole
         matched = matched + destset
     return interface_ips
 

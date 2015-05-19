@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 from fwunit.ip import IP, IPSet
 from fwunit.srx import parse
 from nose.tools import eq_
+from fwunit.test.util.srx_xml import route_xml_blackhole
 from fwunit.test.util.srx_xml import route_xml_11_4R6
 from fwunit.test.util.srx_xml import zones_empty_xml
 from fwunit.test.util.srx_xml import FakeSRX
@@ -140,6 +141,14 @@ def test_parse_zones_empty():
     z = parse.Zone._from_xml(elt)
     eq_(z.interfaces, [])
     eq_(sorted(z.addresses.keys()), sorted(['any', 'any-ipv6', 'any-ipv4']))
+
+
+def test_parse_route_blackhole():
+    elt = parse_xml(route_xml_blackhole, './/rt')
+    r = parse.Route._from_xml(elt)
+    eq_(r.destination, IP('20.0.0.0/8'))
+    eq_(r.interface, None)
+    eq_(r.is_local, False)
 
 
 def test_parse_route_11_4R6():

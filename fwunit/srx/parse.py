@@ -98,11 +98,15 @@ class Route(object):
         #: true if this destination is local (no next-hop IP)
         self.is_local = None
 
+        #: true if this is a "Reject" (blackhole) route
+        self.reject = False
+
     def __str__(self):
         return "%s via %s" % (self.destination, self.interface)
 
     @classmethod
     def _from_xml(cls, rt_elt):
+        valid = False
         route = cls()
         route.destination = IP(rt_elt.find('rt-destination').text)
         for entry in rt_elt.findall('rt-entry'):
@@ -110,11 +114,21 @@ class Route(object):
                 vias = entry.findall('.//via')
                 if vias:
                     route.interface = vias[0].text
+                    valid = True
                 route.is_local = not bool(
                     entry.findall('.//to'))
-        # only return a Route if we found something useful (omitting
-        # nh-local-interface)
-        if route.interface:
+                nh_types = entry.findall('.//nh-type')
+                if nh_types:
+                    if nh_types[0].text == 'Reject':
+                        route.reject = True
+                        valid = True
+
+        # don't pretend blackholes are local
+        if route.reject:
+            route.is_local = False
+
+        # only return a Route if we found something useful
+        if valid:
             return route
 
 
