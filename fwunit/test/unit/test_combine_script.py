@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from nose.tools import assert_raises
 import contextlib
 import copy
 import mock
@@ -75,6 +76,14 @@ def test_run_route_sources_not_list():
     with patched_combine() as combine:
         scripts.run(cfg['enterprise'], cfg)
         combine.assert_called_with(exp_address_spaces, exp_routes, exp_sources('fw1.ord'))
+
+
+def test_run_route_with_invalid_space():
+    cfg = copy.deepcopy(base_cfg)
+    cfg['enterprise']['routes']['mdw -> lax'] = 'fw1.ord'
+    with patched_combine():
+        assert_raises(RuntimeError, lambda:
+            scripts.run(cfg['enterprise'], cfg))
 
 
 def test_run_star_source():

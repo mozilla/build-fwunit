@@ -46,7 +46,11 @@ def run(cfg, fwunit_cfg):
         srcs = address_spaces.keys() if srcs == '*' else [srcs]
         dsts = address_spaces.keys() if dsts == '*' else [dsts]
         for src in srcs:
+            if src not in address_spaces:
+                raise RuntimeError('Unknown address space %s' % src)
             for dst in dsts:
+                if dst not in address_spaces:
+                    raise RuntimeError('Unknown address space %s' % dst)
                 rt = routes[src, dst]
                 for rs in rulesources:
                     rt.add(rs)

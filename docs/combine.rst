@@ -41,13 +41,4 @@ For example:
 
 If (as in this example) the address spaces do not cover the entirety of IPv4, then an address space named ``unmanaged`` is automatically created to cover the remainder.
 
-The ``routes`` mapping defines the set of firewalls between pairs of IP spaces.  The ``*`` wildcard matches all address spaces (including ``unmanaged``).
-The ``<->`` symbol is equivalent to listing two routes, one in each direction.
-
-Assumptions
------------
-
-* Any traffic beteween IPs not in any defined address space is forbidden (more
-  likely, such traffic is not interesting)
-
-
+The ``routes`` mapping defines the set of rule sources applied between pairs of IP spaces.  The ``*`` wildcard matches all address spaces (including ``unmanaged``).  The ``<->`` symbol is equivalent to listing two routes, one in each direction.  Where multiple routes match, all named rule sources are applied.
