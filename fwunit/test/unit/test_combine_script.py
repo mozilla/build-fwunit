@@ -101,3 +101,20 @@ def test_run_star_dest():
     with patched_combine() as combine:
         scripts.run(cfg['enterprise'], cfg)
         combine.assert_called_with(exp_address_spaces, exp_routes, exp_sources('fw1.lax'))
+
+
+def test_run_bidirectional():
+    cfg = copy.deepcopy(base_cfg)
+    cfg['enterprise']['routes']['lax <-> *'] = 'fw1.lax'
+    exp_routes = empty_exp_routes.copy()
+    exp_routes['ord', 'lax'] = set(['fw1.lax'])
+    exp_routes['lax', 'lax'] = set(['fw1.lax'])
+    exp_routes['nyc', 'lax'] = set(['fw1.lax'])
+    exp_routes['unmanaged', 'lax'] = set(['fw1.lax'])
+    exp_routes['lax', 'ord'] = set(['fw1.lax'])
+    exp_routes['lax', 'nyc'] = set(['fw1.lax'])
+    exp_routes['lax', 'lax'] = set(['fw1.lax'])
+    exp_routes['lax', 'unmanaged'] = set(['fw1.lax'])
+    with patched_combine() as combine:
+        scripts.run(cfg['enterprise'], cfg)
+        combine.assert_called_with(exp_address_spaces, exp_routes, exp_sources('fw1.lax'))

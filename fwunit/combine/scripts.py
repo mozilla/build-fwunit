@@ -38,10 +38,10 @@ def run(cfg, fwunit_cfg):
     for srcdest, rulesources in cfg['routes'].iteritems(): 
         if not isinstance(rulesources, list):
             rulesources = [rulesources]
-        mo = re.match(r'(.*?) ?-> ?(.*)', srcdest)
+        mo = re.match(r'(.*?) ?(<?)-> ?(.*)', srcdest)
         if not mo:
             raise RuntimeError("invalid route name {:r}".format(srcdest))
-        srcs, dsts = mo.groups()
+        srcs, bidir, dsts = mo.groups()
         # expand wildcards
         srcs = address_spaces.keys() if srcs == '*' else [srcs]
         dsts = address_spaces.keys() if dsts == '*' else [dsts]
@@ -51,6 +51,10 @@ def run(cfg, fwunit_cfg):
                 for rs in rulesources:
                     rt.add(rs)
                     sources[rs] = None
+                if bidir:
+                    rt = routes[dst, src]
+                    for rs in rulesources:
+                        rt.add(rs)
 
     # load the rules for all of the rule sources referenced
     for rs in sources:
