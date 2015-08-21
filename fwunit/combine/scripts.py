@@ -2,19 +2,54 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import re
+import json
+
 from . import process
 from fwunit import types
-import json
+from fwunit.ip import IP, IPSet
 
 
 def run(cfg, fwunit_cfg):
-    input_rules = {}
+    address_spaces = {}
     for name, ip_space in cfg['address_spaces'].iteritems():
         if not isinstance(ip_space, list):
             ip_space = [ip_space]
-        # look up and load the input's rules
-        input = fwunit_cfg[name]['output']
-        rules = types.from_jsonable(json.load(open(input))['rules'])
-        input_rules[name] = dict(rules=rules, ip_space=ip_space)
+        address_spaces[name] = IPSet([IP(s) for s in ip_space])
 
-    return process.combine(input_rules)
+    # Add an "unmanaged" address space for any IP space not mentioned.
+    managed_space = IPSet([])
+    for sp in address_spaces.itervalues():
+        managed_space += sp
+    unmanaged_space = IPSet([IP('0.0.0.0/0')]) - managed_space
+    if unmanaged_space:
+        address_spaces['unmanaged'] = unmanaged_space
+
+    # parse the routes configuration, expanding wildcards
+    sources = dict()
+    routes = {}
+    for src in address_spaces:
+        for dst in address_spaces:
+            routes[src, dst] = set()
+    for srcdest, rulesources in cfg['routes'].iteritems(): 
+        mo = re.match(r'(.*?) ?-> ?(.*)', srcdest)
+        if not mo:
+            raise RuntimeError("invalid route name {:r}".format(srcdest))
+        srcs, dsts = mo.groups()
+        # expand wildcards
+        srcs = address_spaces.keys() if srcs == '*' else [srcs]
+        dsts = address_spaces.keys() if dsts == '*' else [dsts]
+        for src in srcs:
+            for dst in dsts:
+                rt = routes[src, dst]
+                for rs in rulesources:
+                    rt.add(rs)
+                    sources[rs] = None
+
+    # load the rules for all of the rule sources referenced
+    for rs in sources:
+        input = fwunit_cfg[rs]['output']
+        rules = types.from_jsonable(json.load(open(input))['rules'])
+        sources[rs] = rules=rules
+
+    return process.combine(address_spaces, routes, sources)
