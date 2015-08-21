@@ -28,21 +28,21 @@ For example:
             lax: 172.16.2.0/24
         routes:
             # all traffic to or from dca passes through its firewall
-            'dca -> *': [fw.dca]
-            '* -> dca': [fw.dca]
+            'dca -> *': fw.dca
+            '* -> dca': fw.dca
             # similarly for the other sites
-            'ord -> *': [fw.ord]
-            '* -> ord': [fw.ord]
-            'lax -> *': [fw.lax]
-            '* -> lax': [fw.lax]
+            'ord -> *': fw.ord
+            '* -> ord': fw.ord
+            'lax -> *': fw.lax
+            '* -> lax': fw.lax
             # but traffic from dca to lax passes through ord too
-            'dca -> lax': [fw.ord]
-            'lax -> dca': [fw.ord]
+            'dca -> lax': fw.ord
+            'lax -> dca': fw.ord
             # and all external traffic is via lax (and ord for dca)
             'dca -> unmanaged': [fw1.ord, fw1.lax]
             'unmanaged -> dca': [fw1.ord, fw1.lax]
-            'ord -> unmanaged': [fw1.lax]
-            'unmanaged -> ord': [fw1.lax]
+            'ord -> unmanaged': fw1.lax
+            'unmanaged -> ord': fw1.lax
 
 If (as in this example) the address spaces do not cover the entirety of IPv4, then an address space named ``unmanaged`` is automatically created to cover the remainder.
 

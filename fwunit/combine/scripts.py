@@ -10,6 +10,10 @@ from fwunit import types
 from fwunit.ip import IP, IPSet
 
 
+def get_rules(fwunit_cfg, source_name):
+    input = fwunit_cfg[source_name]['output']
+    return types.from_jsonable(json.load(open(input))['rules'])
+
 def run(cfg, fwunit_cfg):
     address_spaces = {}
     for name, ip_space in cfg['address_spaces'].iteritems():
@@ -32,6 +36,8 @@ def run(cfg, fwunit_cfg):
         for dst in address_spaces:
             routes[src, dst] = set()
     for srcdest, rulesources in cfg['routes'].iteritems(): 
+        if not isinstance(rulesources, list):
+            rulesources = [rulesources]
         mo = re.match(r'(.*?) ?-> ?(.*)', srcdest)
         if not mo:
             raise RuntimeError("invalid route name {:r}".format(srcdest))
@@ -48,8 +54,6 @@ def run(cfg, fwunit_cfg):
 
     # load the rules for all of the rule sources referenced
     for rs in sources:
-        input = fwunit_cfg[rs]['output']
-        rules = types.from_jsonable(json.load(open(input))['rules'])
-        sources[rs] = rules=rules
+        sources[rs] = get_rules(fwunit_cfg, rs)
 
     return process.combine(address_spaces, routes, sources)
