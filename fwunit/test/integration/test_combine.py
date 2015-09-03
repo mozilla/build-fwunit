@@ -42,10 +42,27 @@ RULES_20 = {
 }
 
 def test_combine():
-    res = process.combine({
-        'ten': dict(rules=RULES_10, ip_space=['10.0.0.0/8']),
-        'twenty': dict(rules=RULES_20, ip_space=['20.0.0.0/8']),
-    })
+    address_spaces = {
+        'ten': ipset('10.0.0.0/8'),
+        'twenty': ipset('20.0.0.0/8'),
+        'unmanaged': ipset('0.0.0.0/0') - ipset('10.0.0.0/8') - ipset('20.0.0.0/8'),
+    }
+    routes = {
+        ('ten', 'ten'): ['fw1.ten'],
+        ('ten', 'twenty'): ['fw1.ten', 'fw1.twenty'],
+        ('ten', 'unmanaged'): ['fw1.ten'],
+        ('twenty', 'ten'): ['fw1.ten', 'fw1.twenty'],
+        ('twenty', 'twenty'): ['fw1.twenty'],
+        ('twenty', 'unmanaged'): ['fw1.twenty'],
+        ('unmanaged', 'ten'): ['fw1.ten'],
+        ('unmanaged', 'twenty'): ['fw1.twenty'],
+        ('unmanaged', 'unmanaged'): [],
+    }
+    sources = {
+        'fw1.ten': RULES_10,
+        'fw1.twenty': RULES_20,
+    }
+    res = process.combine(address_spaces, routes, sources)
     res['http'].sort()
     eq_(res, {
         'http': sorted([
