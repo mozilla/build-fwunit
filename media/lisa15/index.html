@@ -15,7 +15,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
 
 		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/mozilla.css" id="theme">
+		<link rel="stylesheet" href="css/theme/moon.css" id="theme">
 
 		<!-- Code syntax highlighting -->
 		<link rel="stylesheet" href="lib/css/zenburn.css">
@@ -79,20 +79,135 @@
                 <!-- HANDOFF michal -> dustin --> 
 
 				<section>
-					<h2>Unit Tests</h2>
+					<h2>Network Behavior</h2>
+
+                    <blockquote>"The staging web servers should have access to the staging DB severs on port 5432."</blockquote>
+                    <hr>
+                    <blockquote>"The office network should not have access to the DB servers."</blockquote>
+                    <hr>
+                    <blockquote>"This route-table change should not affect reachability."</blockquote>
 				</section>
 
 				<section>
-					<h2>Writing Unit Tests</h2>
+					<h2>Test Driven Development</h2>
+
+                    <!-- replace with SVG -->
+                    <pre>
+                    Behavior ---&gt; Implementation
+                      |                ^
+                      |                | verification
+                    Tests -------------+
+                    </pre>
+				</section>
+
+                <section>
+                    <section>
+                        <h2>Unit Tests</h2>
+                        <pre><code data-trim class="hljs python">
+def test_worker_ssh():
+    """Bug 1289789: worker managers have outbound access to all managed
+    subnets via SSH"""
+    rules.assertPermits(
+        worker_managers,
+        managed_use1 + managed_staging_use1 + managed1_usw2,
+        'ssh')
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Unit Tests</h2>
+                        <pre><code data-trim class="hljs python">
+managed1_usw2 = IPSet([IP('10.14.136.0/24')])
+managed1_use1 = IPSet([IP('10.13.136.0/24')])
+managed1_staging_use1 = IPSet([IP('10.13.133.0/24')])
+
+worker_managers = IPSet([
+    host('worker-manager1.scl3.mozilla.com'),
+    host('worker-manager2.scl3.mozilla.com'),
+])
+                        </code></pre>
+                    </section>
 				</section>
 
 				<section>
-					<h2>Unit Tests as Documentation</h2>
+					<h2>Readability?</h2>
+                        <pre><code data-trim class="hljs python">
+match {
+    source-address [ worker-manager1 worker-manager2 ];
+    destination-address worker-subnets;
+    application junos-ssh;
+}
+then {
+    permit;
+}
+                        </code></pre>
+                        <pre><code data-trim class="hljs python">
+def test_worker_ssh():
+    """Bug 1289789: worker managers have outbound access to all managed
+    subnets via SSH"""
+    rules.assertPermits(
+        worker_managers,
+        managed_use1 + managed_staging_use1 + managed1_usw2,
+        'ssh')
+                        </code></pre>
 				</section>
 
 				<section>
-					<h2>Design</h2>
-				</section>
+                    <section>
+                        <h2>Unit Tests as Documentation</h2>
+                            <pre><code data-trim class="hljs python">
+"""
+Workers are EC2 instances created in various Amazon regions.  They
+are managed by worker-managers, both via the AWS APIs and directly
+by connecting to the workers using SSH.
+
+Workers are not able to communicate between themselves, but do have full
+Internet access.
+"""
+                            </code></pre>
+                    </section>
+                    <section>
+<div style="text-align: left; border: thin solid #E0E0E5; padding: 1em; font-size: 75%;">
+<h3>Workers</h3>
+<p>Workers are EC2 instances created in various Amazon regions.  They are managed
+by worker-managers, both via the AWS APIs and directly by connecting to the
+workers using SSH.
+
+<p>Workers are not able to communicate between themselves, but do have full
+Internet access.
+
+<hr>
+<p><em>test_worker_ssh</em> - Bug 1289789: worker managers have outbound access to all
+managed subnets via SSH
+</div>
+                    </section>
+                </section>
+
+				<section>
+                    <section>
+                        <h2>Design</h2>
+
+        <!-- diagram of IPv4^2 matrices, one per application -->
+
+                    </section>
+                    <section>
+                        <h2>SRX</h2>
+
+        <!-- firewall icon ==> matrices -->
+
+                    </section>
+                    <section>
+                        <h2>AWS</h2>
+
+        <!-- EC2 VPC icon ==> matrices -->
+
+                    </section>
+                    <section>
+                        <h2>Combinder</h2>
+
+        <!-- matrices ==> matrices (based on routing) -->
+
+                    </section>
+                </section>
 
 				<section>
 					<h2>Motivating Examples (revisited)</h2>
