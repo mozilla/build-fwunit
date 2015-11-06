@@ -32,6 +32,13 @@
 		<!--[if lt IE 9]>
 		<script src="lib/js/html5shiv.js"></script>
 		<![endif]-->
+        <style>
+        img.noborder {
+            border-style: none !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+        </style>
 	</head>
 
 	<body>
@@ -91,7 +98,7 @@
 				<section>
 					<h2>Test Driven Development</h2>
 
-                    <img src="tdd.svg" class="stretch" />
+                    <img src="tdd.svg" class="stretch noborder" />
 				</section>
 
                 <section>
@@ -154,8 +161,8 @@ Workers are EC2 instances created in various Amazon regions.  They
 are managed by worker-managers, both via the AWS APIs and directly
 by connecting to the workers using SSH.
 
-Workers are not able to communicate between themselves, but do have full
-Internet access.
+Workers are not able to communicate between themselves, but do have
+full Internet access.
 """
                             </code></pre>
                     </section>
@@ -180,35 +187,72 @@ managed subnets via SSH
                     <section>
                         <h2>Design</h2>
 
-                        <img src="singlematrix.svg" class="stretch" />
+                        <img src="matrix2.svg" class="stretch noborder" />
+                        <p>
+                        [IPv4] x [IPv4] =&gt; {permitted, denied} 
 
                     </section>
                     <section>
-                        <h2>SRX</h2>
+                        <img src="matrices.svg" class="stretch noborder" />
+                        <p>
+                        [apps] x [IPv4] x [IPv4] =&gt; {permitted, denied} 
 
-        <!-- firewall icon ==> matrices -->
+                    </section>
+                    <section>
+                        <h2>Juniper</h2>
+
+                        <img src="srx-matrices.svg" class="stretch noborder" />
 
                     </section>
                     <section>
                         <h2>AWS</h2>
 
-        <!-- EC2 VPC icon ==> matrices -->
+                        <img src="aws-matrices.svg" class="stretch noborder" />
 
                     </section>
                     <section>
-                        <h2>Combinder</h2>
+                        <h2>Combiner</h2>
 
-        <!-- matrices ==> matrices (based on routing) -->
+                        <img src="combiner-matrices.svg" class="stretch noborder" />
 
                     </section>
                 </section>
 
 				<section>
 					<h2>Motivating Examples (revisited)</h2>
+                    <ul>
+                        <li class="fragment">Is this flow open? <span class="fragment highlight-green">Check the docs</span></li>
+                        <li class="fragment">Is this configured correctly? <span class="fragment highlight-green">Run the tests</span></li>
+                        <li class="fragment">What do you mean by DB servers? <span class="fragment highlight-green">Check the tests</span></li>
+                        <li class="fragment">Did this refactor break something? <span class="fragment highlight-green">Run the tests</span></li>
+                        <li class="fragment">Audit time - what flows are allowed? <span class="fragment highlight-green">See the docs</span></li>
+                    </ul>
 				</section>
 
 				<section>
-					<h2>Future Work</h2>
+                    <section>
+                        <h2>Future Work</h2>
+                    </section>
+                    <section>
+                        <img src="in-production.png" class="stretch" />
+                    </section>
+                    <section>
+                        <img src="ipv6.jpg" class="stretch" />
+                    </section>
+                    <section>
+                        <img src="ntfs.png" class="stretch" />
+                    </section>
+                    <section>
+                        <img src="taskcluster.svg" class="stretch noborder" />
+                    </section>
+				</section>
+
+				<section>
+                    <h4>Michal Purzynski</h4>
+                    michal@mozilla.com
+                    <hr/>
+                    <h4>Dustin J. Mitchell</h4>
+                    github.com/djmitche<br/>dustin@mozilla.com
 				</section>
 
             </div>
