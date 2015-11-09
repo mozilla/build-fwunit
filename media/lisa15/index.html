@@ -55,17 +55,53 @@
 					</p>
 				</section>
 
-				<section>
-					<h2>Motivating Examples</h2>
-				</section>
+               <section>
+                   <h3>confusion about what flows are and are not allowed</h3>
+                   <blockquote>"please open port foo from bar to bing"</blockquote>
+                   <blockquote><span class="fragment highlight-green">"that is already open.. R/WFM"</span></blockquote>
+                </section>
 
-				<section>
-					<h2>What is fwunit?</h2>
-				</section>
+               <section>
+                   <h3>bugs where flow configurations are incorrect</h3>
+                   <blockquote>"please open port foo from bar to bing"</blockquote>
+                   <blockquote>"ok" / "that flow SHOULD be allowed already, let me know if it does not work"</blockquote>
+                   <blockquote><span class="fragment highlight-green">"bar1 can’t access bing3.. missed something?"</span></blockquote>
+                </section>
 
-				<section>
-					<h2>Commercial Tools</h2>
-				</section>
+                <section>
+                <h3>flow changes required when deploying changes</h3>
+                <blockquote>"Please give all webheads access to the cache servers"</blockquote>
+                <blockquote><span class="fragment highlight-green">"uhh, what webheads? which cache servers?"</span></blockquote>
+                </section>
+
+                <section>
+                <h3>outages when flow modifications unintentionally break existing functionality</h3>
+                <blockquote>"Hi, my service timeouts"</blockquote>
+                <blockquote><span class="fragment highlight-green">"My bad... typo in a config"</span></blockquote>
+                </section>
+
+                <section>
+                <h3>trivial queries</h3>
+                <blockquote>"I need you to tell me what flows are allowed from/to my subnets"</blockquote>
+                <blockquote><span class="fragment highlight-green">"That sounds like a 3 month project"</span></blockquote>
+                </section>
+
+                <section>
+                    <h2>What is fwunit?</h2>
+                    <p><span class="fragment">Gather firewall configuration</span><p>
+                    <p><span class="fragment">Build a database</span></p>
+                    <p><span class="fragment">Allow queries against that data</span></p>
+                </section>
+
+                <section>
+                    <h2>Commercial Tools</h2>
+                    <p><span class="fragment">They support all of the devices we don’t have</p></span>
+                    <p><span class="fragment">They have no idea about routing, multiple tables - that makes the result incorrect</p></span>
+                    <p><span class="fragment">They don’t scale and a single query takes over 40 minutes</span></p>
+                    <p><span class="fragment">Good luck scripting them. API - objects in XML?</span></p>
+                    <p><span class="fragment">Compliance rules are frequently hard coded to things like PCI</span></p>
+                    <p><span class="fragment">I want to use vim</span></p>
+                </section>
 
 				<section>
 					<h2>Gathering Flow Data</h2>
@@ -73,6 +109,9 @@
 
 				<section>
 					<h2>Querying Flows</h2>
+                    <video width="100%" preload="auto" controls>
+                        <source data-src="fwunit-query.mp4" type="video/mp4" />
+                    </video>
 				</section>
 
 				<section>
@@ -81,6 +120,9 @@
 
 				<section>
 					<h2>Verifying Compliance</h2>
+                    <video width="100%" preload="auto" controls>
+                        <source data-src="fwunit-compliance.mp4" type="video/mp4" />
+                    </video>
 				</section>
 
                 <!-- HANDOFF michal -> dustin --> 
