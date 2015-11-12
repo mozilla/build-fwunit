@@ -96,15 +96,25 @@
                   <section>
                     <h3>trivial queries</h3>
                     <blockquote>"I need you to tell me what flows are allowed from/to my subnets"</blockquote>
-                    <blockquote><span class="fragment highlight-green">"That sounds like a 3 month project"</span></blockquote>
+                    <blockquote><span class="fragment highlight-green">"I'll get back to you next quarter"</span></blockquote>
                   </section>
                 </section>
 
                 <section>
                     <h2>What is fwunit?</h2>
-                    <p><span class="fragment">Gather firewall configuration</span><p>
-                    <p><span class="fragment">Build a database</span></p>
-                    <p><span class="fragment">Allow queries against that data</span></p>
+                    <p><span class="fragment">Gather data about permitted and denied traffic</span><p>
+                    <p><span class="fragment">Support dynamic queries against that data</span></p>
+                    <p><span class="fragment">Support automated verification of expected behavior</span></p>
+                </section>
+
+                <section>
+                    <h2>Commercial Tools</h2>
+                    <p><span class="fragment">They support all of the devices we don’t have</p></span>
+                    <p><span class="fragment">They cannot combine policies - that makes the result incorrect</p></span>
+                    <p><span class="fragment">They don’t scale and a single query takes over 40 minutes</span></p>
+                    <p><span class="fragment">Good luck scripting them. API - objects in XML?</span></p>
+                    <p><span class="fragment">Compliance rules are frequently hard coded to things like PCI</span></p>
+                    <p><span class="fragment">We want to use vim</span></p>
                 </section>
 
 				<section>
@@ -121,24 +131,14 @@
                     </video>
 				</section>
 
-                <section>
-                    <h2>Commercial Tools</h2>
-                    <p><span class="fragment">They support all of the devices we don’t have</p></span>
-                    <p><span class="fragment">They cannot combine policies - that makes the result incorrect</p></span>
-                    <p><span class="fragment">They don’t scale and a single query takes over 40 minutes</span></p>
-                    <p><span class="fragment">Good luck scripting them. API - objects in XML?</span></p>
-                    <p><span class="fragment">Compliance rules are frequently hard coded to things like PCI</span></p>
-                    <p><span class="fragment">We want to use vim</span></p>
-                </section>
-
 				<section>
 					<h2>Network Behavior</h2>
 
-                    <blockquote>"The staging web servers should have access to the staging DB severs on port 5432."</blockquote>
+                    <blockquote class="fragment">"The staging web servers should have access to the staging DB severs on port 5432."</blockquote>
                     <hr>
-                    <blockquote>"The office network should not have access to the DB servers."</blockquote>
+                    <blockquote class="fragment">"The office network should not have access to the DB servers."</blockquote>
                     <hr>
-                    <blockquote>"This route-table change should not affect reachability."</blockquote>
+                    <blockquote class="fragment">"This route-table change should not affect reachability."</blockquote>
 				</section>
 
 				<section>
@@ -272,9 +272,9 @@ managed subnets via SSH
                     <ul>
                         <li class="fragment">Is this flow already open? <span class="fragment highlight-green">Check the docs</span></li>
                         <li class="fragment">Is this new flow correct? <span class="fragment highlight-green">Run the tests</span></li>
-                        <li class="fragment">Which DB servers? <span class="fragment highlight-green">Check the tests</span></li>
+                        <li class="fragment">Which DB servers? <span class="fragment highlight-green">Read the host file</span></li>
                         <li class="fragment">Oops, did my refactor break something? <span class="fragment highlight-green">Run the tests</span></li>
-                        <li class="fragment">General queries - what flows are allowed? <span class="fragment highlight-green">See the docs</span></li>
+                        <li class="fragment">General queries - what flows are allowed? <span class="fragment highlight-green"><tt>fwunit-query</tt></span></li>
                     </ul>
 				</section>
 
@@ -297,6 +297,9 @@ managed subnets via SSH
 				</section>
 
 				<section>
+                    <h3>fwunit</h3>
+                    https://github.com/mozilla/build-fwunit
+                    <hr/>
                     <h4>Michal Purzynski</h4>
                     michal@mozilla.com
                     <hr/>
