@@ -11,7 +11,7 @@ Install fwunit with the ``srx`` tag:
 
 .. code-block:: none
 
-    pip install fwunit[aws]
+    pip install fwunit[srx]
 
 Add a source to your ``fwunit.yaml`` looking like this:
 
