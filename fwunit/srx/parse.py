@@ -6,6 +6,7 @@ import lxml.etree as ET
 from . import show
 from fwunit.ip import IP, IPSet
 from logging import getLogger
+import time
 
 log = getLogger(__name__)
 
@@ -254,16 +255,22 @@ class Firewall(object):
         count = 0
         for from_zone in zone_names:
             for to_zone in zone_names:
+                dl_start = time.time()
                 log.info(
                     "downloading policies from-zone %s to-zone %s (%3.0f%%)",
                     from_zone, to_zone, (100 * count / num_downloads))
                 count += 1
                 policies_xml = ssh_connection.show(
                     'security policies from-zone %s to-zone %s' % (from_zone, to_zone))
+                dl_duration = time.time() - dl_start
 
                 log.info(
                     "parsing policies from-zone %s to-zone %s", from_zone, to_zone)
                 sspe = ET.fromstring(policies_xml)
+
+                # downloading zones can cause high load on the poor underpowered control
+                # plane, so we sleep as long as the query took
+                time.sleep(max(0.1, dl_start + 2 * dl_duration - time.time()))
 
                 for elt in sspe.findall('.//security-context'):
                     from_zone = elt.find(
