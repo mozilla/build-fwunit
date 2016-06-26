@@ -187,9 +187,13 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
     all_apps = all_apps | set(app_map.keys())
     all_apps.discard('any')
     global_policies = policies_by_zone_pair.get((None, None), [])
+    global_policies.sort(key=lambda p: p.sequence)
     for from_zone, to_zone in itertools.product(zone_nets, zone_nets):
         zpolicies = sorted(policies_by_zone_pair.get((from_zone, to_zone), []),
                            key=lambda p: p.sequence)
+        # zone policies are higher priority than global policies, regardless of sequence:
+        # http://www.juniper.net/documentation/en_US/junos12.1x44/topics/concept/security-policy-global-policy-overview.html
+        # so the two are simply concatenated here.
         zpolicies += global_policies
         logger.debug(" from-zone %s to-zone %s (%d policies)", from_zone, to_zone,
                      len(zpolicies))
@@ -205,7 +209,7 @@ def process_rules(app_map, policies, zone_nets, policies_by_zone_pair,
             remaining_pairs = IPPairs(
                 (zone_nets[from_zone], zone_nets[to_zone]))
             rules = rules_by_app.setdefault(mapped_app, [])
-            for pol in zpolicies + global_policies:
+            for pol in zpolicies:
                 if app not in pol.applications and 'any' not in pol.applications:
                     continue
                 src = src_per_policy[pol]
