@@ -35,7 +35,7 @@ setup(
         ],
         'aws': [
             'boto',
-            'moto',
+            'moto<0.4.24',
         ],
         'docs': [
             'sphinx',
