@@ -120,7 +120,7 @@ def test_run_global_policies_and_addrbook():
     F.add_policy('global',
                  dict(sequence=10, name='ping', src='any', dst='any', app='junos-ping', action='permit'))
     F.add_policy('global',
-                 dict(sequence=10, name='deny', src='any', dst='any', app='any', action='deny'))
+                 dict(sequence=11, name='deny', src='any', dst='any', app='any', action='deny'))
 
     rules = scripts.run(fake_cfg, {})
     for r in rules.itervalues():

@@ -21,6 +21,8 @@ def mkpol(**kwargs):
     kwargs.setdefault('action', 'permit')
     kwargs.setdefault('enabled', True)
     kwargs.setdefault('sequence', 1)
+    kwargs['source_addresses'] = kwargs.pop('src_addrs')
+    kwargs['destination_addresses'] = kwargs.pop('dst_addrs')
     pol = parse.Policy()
     for k, v in kwargs.iteritems():
         setattr(pol, k, v)
@@ -32,8 +34,8 @@ def call_process_rules(app_map, policies, zone_nets):
     for pol in policies:
         policies_by_zone_pair.setdefault(
             (pol.from_zone, pol.to_zone), []).append(pol)
-    src_per_policy = {pol: pol.src_addrs for pol in policies}
-    dst_per_policy = {pol: pol.dst_addrs for pol in policies}
+    src_per_policy = {pol: pol.source_addresses for pol in policies}
+    dst_per_policy = {pol: pol.destination_addresses for pol in policies}
     res = process.process_rules(app_map, policies, zone_nets,
                                 policies_by_zone_pair, src_per_policy,
                                 dst_per_policy)
@@ -92,6 +94,31 @@ def test_process_rules_any_app():
             Rule(src=ipset('192.168.1.128'),
                  dst=ipset('10.0.0.0/8', '128.135.0.0/16', '192.168.0.0/16'),
                  app='@@other', name='admin'),
+        ],
+    }
+    [ruleset.sort() for ruleset in exp.itervalues()]
+    eq_(res, exp)
+
+
+def test_process_global_priority():
+    # test the relative priority of "regular" (per-zone) and global policies
+    policies = [
+        mkpol(name='ok', from_zone='pvt', to_zone='pub',
+            src_addrs=ipset('192.168.1.2/31'), dst_addrs=ipset('0.0.0.0/0'),
+            applications=['junos-ssh'], sequence=100),
+        mkpol(name='deny-all-global', from_zone=None, to_zone=None,
+            src_addrs=ipset('0.0.0.0/0'), dst_addrs=ipset('0.0.0.0/0'),
+            applications=['junos-ssh'], sequence=3, action='deny'),
+        mkpol(name='ok-global', from_zone=None, to_zone=None,
+            src_addrs=ipset('192.168.1.128/32'), dst_addrs=ipset('128.135.0.0/16'),
+            applications=['junos-ssh'], sequence=1),
+    ]
+    res = call_process_rules(APP_MAP, policies, ZONE_NETS)
+    exp = {
+        'junos-ssh': [
+            Rule(src=ipset('192.168.1.128/32', '192.168.1.2/31'),
+                 dst=ipset('128.135.0.0/16'),
+                 app='junos-ssh', name='ok+ok-global'),
         ],
     }
     [ruleset.sort() for ruleset in exp.itervalues()]
