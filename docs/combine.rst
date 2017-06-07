@@ -21,6 +21,7 @@ For example:
 
     enterprise:
         type: combine
+        output: enterprise.json
         require: [fw.dca, fw.lax, fw.ord]
         address_spaces:
             dca: [10.10.0.0/16, 10.15.0.0/14]
